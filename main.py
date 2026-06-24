@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer
@@ -207,19 +207,6 @@ def register(user_data: UserRegister, db: Session = Depends(get_db)):
     return novo_usuario
 
 
-@app.post("/login", response_model=Token)
-def login(login_data: LoginRequest, db: Session = Depends(get_db)):
-    user = get_user_by_username(db, login_data.username)
-    if not user or not pwd_context.verify(login_data.senha, user.senha_hash):
-        raise HTTPException(status_code=400, detail="Usuário ou senha incorretos.")
-
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode = {"sub": str(user.id), "exp": expire}
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-    return {"access_token": encoded_jwt, "token_type": "bearer"}
-
-
 @app.post("/valuations", response_model=ValuationResponse)
 def save_valuation(
     valuation: ValuationCreate,
@@ -263,6 +250,49 @@ def list_valuations(
     return history
 
 
+# 1. A Rota de Login agora salva o token direto em um Cookie seguro no navegador
+@app.post("/login")
+def login(login_data: LoginRequest, response: Response, db: Session = Depends(get_db)):
+    user = get_user_by_username(db, login_data.username)
+    if not user or not pwd_context.verify(login_data.senha, user.senha_hash):
+        raise HTTPException(status_code=400, detail="Usuário ou senha incorretos.")
+
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode = {"sub": str(user.id), "exp": expire}
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+    # Cria o Cookie (httponly=True impede que hackers roubem o cookie via JavaScript)
+    response.set_cookie(
+        key="access_token",
+        value=f"Bearer {encoded_jwt}",
+        httponly=True,
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )
+    return {"message": "Login realizado com sucesso"}
+
+
+# 2. A Rota Principal (A "Porta de Entrada" do site) decide qual HTML enviar
 @app.get("/")
-def serve_frontend():
-    return FileResponse("frontend/index.html")
+def serve_frontend(request: Request):
+    token = request.cookies.get("access_token")
+
+    # Se não tem cookie nenhum, entrega só a tela de login
+    if not token:
+        return FileResponse("frontend/login.html")
+
+    # Se tem cookie, tenta validar
+    try:
+        scheme, _, param = token.partition(" ")
+        jwt.decode(param, SECRET_KEY, algorithms=[ALGORITHM])
+        # Cookie é válido! Envia o código secreto da calculadora
+        return FileResponse("frontend/calculator.html")
+    except JWTError:
+        # Se o token expirou ou for falso, manda pra tela de login
+        return FileResponse("frontend/login.html")
+
+
+# 3. Rota para fazer Logout (apagar o Cookie)
+@app.post("/logout")
+def logout(response: Response):
+    response.delete_cookie("access_token")
+    return {"message": "Logout realizado"}
