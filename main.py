@@ -17,8 +17,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
-from passlib.context import CryptContext
 from jose import JWTError, jwt
+import bcrypt
 
 # ==========================================
 # CONFIGURAÇÕES DO BANCO DE DADOS (SQLITE)
@@ -38,7 +38,6 @@ SECRET_KEY = "sua_chave_secreta_super_segura_aqui"  # Mude isso em produção
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 
@@ -189,22 +188,25 @@ app.add_middleware(
 )
 
 
-@app.post("/register", response_model=UserResponse, status_code=201)
-def register(user_data: UserRegister, db: Session = Depends(get_db)):
-    db_user = get_user_by_username(db, user_data.username)
-    if db_user:
-        raise HTTPException(
-            status_code=400, detail="Este nome de usuário já está em uso."
-        )
-
-    hashed_password = pwd_context.hash(user_data.senha)
-    novo_usuario = UserDB(
-        nome=user_data.nome, username=user_data.username, senha_hash=hashed_password
-    )
-    db.add(novo_usuario)
-    db.commit()
-    db.refresh(novo_usuario)
-    return novo_usuario
+# @app.post("/register", response_model=UserResponse, status_code=201)
+# def register(user_data: UserRegister, db: Session = Depends(get_db)):
+#     db_user = get_user_by_username(db, user_data.username)
+#     if db_user:
+#         raise HTTPException(
+#             status_code=400, detail="Este nome de usuário já está em uso."
+#         )
+#
+#     salt = bcrypt.gensalt()
+#     hashed_password = bcrypt.hashpw(user_data.senha.encode("utf-8"), salt).decode(
+#         "utf-8"
+#     )
+#     novo_usuario = UserDB(
+#         nome=user_data.nome, username=user_data.username, senha_hash=hashed_password
+#     )
+#     db.add(novo_usuario)
+#     db.commit()
+#     db.refresh(novo_usuario)
+#     return novo_usuario
 
 
 @app.post("/valuations", response_model=ValuationResponse)
@@ -254,7 +256,9 @@ def list_valuations(
 @app.post("/login")
 def login(login_data: LoginRequest, response: Response, db: Session = Depends(get_db)):
     user = get_user_by_username(db, login_data.username)
-    if not user or not pwd_context.verify(login_data.senha, user.senha_hash):
+    if not user or not bcrypt.checkpw(
+        login_data.senha.encode("utf-8"), user.senha_hash.encode("utf-8")
+    ):
         raise HTTPException(status_code=400, detail="Usuário ou senha incorretos.")
 
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
