@@ -1,3 +1,4 @@
+from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, Depends, HTTPException, status, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -177,6 +178,8 @@ def get_current_user_id(token: str = Depends(oauth2_scheme)) -> int:
 # ROTAS DA API (FastAPI)
 # ==========================================
 app = FastAPI(title="API de Valuation FCD - 9 Passos")
+
+app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
 
 # Configuração de CORS para permitir conexões do React (local ou VPS)
 app.add_middleware(
