@@ -20,6 +20,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from jose import JWTError, jwt
 import bcrypt
+import httpx
+import os
 
 # ==========================================
 # CONFIGURAÇÕES DO BANCO DE DADOS (SQLITE)
@@ -191,25 +193,25 @@ app.add_middleware(
 )
 
 
-@app.post("/register", response_model=UserResponse, status_code=201)
-def register(user_data: UserRegister, db: Session = Depends(get_db)):
-    db_user = get_user_by_username(db, user_data.username)
-    if db_user:
-        raise HTTPException(
-            status_code=400, detail="Este nome de usuário já está em uso."
-        )
-
-    salt = bcrypt.gensalt()
-    hashed_password = bcrypt.hashpw(user_data.senha.encode("utf-8"), salt).decode(
-        "utf-8"
-    )
-    novo_usuario = UserDB(
-        nome=user_data.nome, username=user_data.username, senha_hash=hashed_password
-    )
-    db.add(novo_usuario)
-    db.commit()
-    db.refresh(novo_usuario)
-    return novo_usuario
+# @app.post("/register", response_model=UserResponse, status_code=201)
+# def register(user_data: UserRegister, db: Session = Depends(get_db)):
+#    db_user = get_user_by_username(db, user_data.username)
+#    if db_user:
+#        raise HTTPException(
+#            status_code=400, detail="Este nome de usuário já está em uso."
+#        )
+#
+#    salt = bcrypt.gensalt()
+#    hashed_password = bcrypt.hashpw(user_data.senha.encode("utf-8"), salt).decode(
+#        "utf-8"
+#    )
+#    novo_usuario = UserDB(
+#        nome=user_data.nome, username=user_data.username, senha_hash=hashed_password
+#    )
+#    db.add(novo_usuario)
+#    db.commit()
+#    db.refresh(novo_usuario)
+#    return novo_usuario
 
 
 @app.post("/valuations", response_model=ValuationResponse)
@@ -303,3 +305,29 @@ def serve_frontend(request: Request):
 def logout(response: Response):
     response.delete_cookie("access_token")
     return {"message": "Logout realizado"}
+
+
+# ==========================================
+# INTEGRAÇÃO BRAPI (Segura)
+# ==========================================
+BRAPI_TOKEN = os.getenv("BRAPI_TOKEN")
+
+
+@app.get("/api/quote/{ticker}")
+async def get_quote(ticker: str, request: Request):
+    # Proteção extra: só permite a busca se o usuário estiver logado com o cookie!
+    token = request.cookies.get("access_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Não autorizado")
+
+    # Faz a requisição por debaixo dos panos para a Brapi
+    async with httpx.AsyncClient() as client:
+        url = f"https://brapi.dev/api/quote/{ticker}?token={BRAPI_TOKEN}"
+        resposta = await client.get(url)
+
+        if resposta.status_code != 200:
+            raise HTTPException(
+                status_code=400, detail="Erro ao buscar cotação na Brapi"
+            )
+
+        return resposta.json()

@@ -13,7 +13,6 @@ document.addEventListener('alpine:init', () => {
 		numAcoes: 4500,
 		margemSeguranca: 20,
 		ocultarResultados: false,
-		brapiToken: '',
 
 		init() {
 			this.$watch('anosProjecao', (val) => {
@@ -39,13 +38,22 @@ document.addEventListener('alpine:init', () => {
 		},
 
 		buscarPrecoNaBrapi() {
-			if (!this.brapiToken || !this.ticker) return;
-			fetch(`https://brapi.dev/api/quote/${this.ticker}?token=${this.brapiToken}`)
-				.then(res => res.json())
+			if (!this.ticker) return;
+
+			// Agora o fetch aponta para o seu próprio backend FastAPI!
+			fetch(`/api/quote/${this.ticker}`)
+				.then(res => {
+					if (!res.ok) throw new Error("Cotação não encontrada");
+					return res.json();
+				})
 				.then(data => {
 					if (data.results && data.results.length > 0 && data.results[0].regularMarketPrice) {
 						this.precoAtual = data.results[0].regularMarketPrice;
 					}
+				})
+				.catch(err => {
+					alert("Erro ao buscar a cotação. Verifique o ticker.");
+					console.error(err);
 				});
 		},
 
