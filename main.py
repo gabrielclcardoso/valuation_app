@@ -188,25 +188,25 @@ app.add_middleware(
 )
 
 
-# @app.post("/register", response_model=UserResponse, status_code=201)
-# def register(user_data: UserRegister, db: Session = Depends(get_db)):
-#     db_user = get_user_by_username(db, user_data.username)
-#     if db_user:
-#         raise HTTPException(
-#             status_code=400, detail="Este nome de usuário já está em uso."
-#         )
-#
-#     salt = bcrypt.gensalt()
-#     hashed_password = bcrypt.hashpw(user_data.senha.encode("utf-8"), salt).decode(
-#         "utf-8"
-#     )
-#     novo_usuario = UserDB(
-#         nome=user_data.nome, username=user_data.username, senha_hash=hashed_password
-#     )
-#     db.add(novo_usuario)
-#     db.commit()
-#     db.refresh(novo_usuario)
-#     return novo_usuario
+@app.post("/register", response_model=UserResponse, status_code=201)
+def register(user_data: UserRegister, db: Session = Depends(get_db)):
+    db_user = get_user_by_username(db, user_data.username)
+    if db_user:
+        raise HTTPException(
+            status_code=400, detail="Este nome de usuário já está em uso."
+        )
+
+    salt = bcrypt.gensalt()
+    hashed_password = bcrypt.hashpw(user_data.senha.encode("utf-8"), salt).decode(
+        "utf-8"
+    )
+    novo_usuario = UserDB(
+        nome=user_data.nome, username=user_data.username, senha_hash=hashed_password
+    )
+    db.add(novo_usuario)
+    db.commit()
+    db.refresh(novo_usuario)
+    return novo_usuario
 
 
 @app.post("/valuations", response_model=ValuationResponse)

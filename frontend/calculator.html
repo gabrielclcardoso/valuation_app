@@ -1,799 +1,479 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Valuation FCD - 9 Passos</title>
 
-    <script src="https://cdn.tailwindcss.com"></script>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Valuation FCD - Dark Mode</title>
 
-    <script
-      defer
-      src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
-    ></script>
+	<script src="https://cdn.tailwindcss.com"></script>
 
-    <style>
-      [x-cloak] {
-        display: none !important;
-      }
-    </style>
-  </head>
-  <body
-    class="bg-slate-100 font-sans text-slate-800"
-    x-data="valuationApp"
-    x-cloak
-  >
-    <div class="min-h-screen p-4 sm:p-8">
-      <div class="max-w-6xl mx-auto space-y-6">
-        <div
-          class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 text-center relative overflow-hidden"
-        >
-          <h1 class="text-3xl font-extrabold text-slate-900">
-            Valuation FCD (FCFF) - 9 Passos
-          </h1>
-          <p class="text-slate-500 mt-2">
-            Siga o roteiro completo para precificar ações de dividendos com
-            segurança.
-          </p>
+	<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
-          <div class="mt-4 flex justify-center">
-            <button
-              @click="ocultarResultados = !ocultarResultados"
-              :class="ocultarResultados ? 'bg-amber-500 text-white border-amber-600 hover:bg-amber-600 shadow-md' : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'"
-              class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all border"
-            >
-              <template x-if="ocultarResultados">
-                <span class="flex items-center gap-2">
-                  <svg
-                    class="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    ></path>
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                    ></path>
-                  </svg>
-                  Modo Às Cegas: ATIVADO
-                </span>
-              </template>
-              <template x-if="!ocultarResultados">
-                <span class="flex items-center gap-2">
-                  <svg
-                    class="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M13.875 18.825A10.05 10.05 0 0112  19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"
-                    ></path>
-                  </svg>
-                  Ativar Modo de Estimativa às Cegas
-                </span>
-              </template>
-            </button>
-          </div>
-        </div>
+	<style>
+		[x-cloak] {
+			display: none !important;
+		}
 
-        <template x-if="resultados.erro">
-          <div
-            class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-sm"
-          >
-            <strong>Erro Matemático:</strong>
-            <span x-text="resultados.erro"></span>
-          </div>
-        </template>
+		/* Suaviza a barra de rolagem para combinar com o tema escuro */
+		::-webkit-scrollbar {
+			width: 8px;
+		}
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div class="lg:col-span-4 space-y-6">
-            <div
-              class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"
-            >
-              <h2
-                class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2 border-b pb-2"
-              >
-                <svg
-                  class="w-5 h-5 text-blue-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                  ></path>
-                </svg>
-                Dados e Premissas
-              </h2>
+		::-webkit-scrollbar-track {
+			background: #0f172a;
+		}
 
-              <div class="space-y-4">
-                <div
-                  class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs mb-4"
-                >
-                  <label class="block font-semibold text-slate-600 mb-1"
-                    >Token Brapi (Opcional - Cotação Auto)</label
-                  >
-                  <input
-                    type="text"
-                    x-model="brapiToken"
-                    placeholder="Cole seu token aqui..."
-                    class="w-full p-1.5 border rounded focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
+		::-webkit-scrollbar-thumb {
+			background: #334155;
+			border-radius: 4px;
+		}
 
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label
-                      class="block text-xs font-semibold text-slate-500 mb-1"
-                      >Ticker</label
-                    >
-                    <input
-                      type="text"
-                      x-model="ticker"
-                      @input="ticker = ticker.toUpperCase()"
-                      class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 bg-slate-50 font-bold uppercase"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      class="block text-xs font-semibold text-slate-500 mb-1"
-                      >Preço Atual (R$)</label
-                    >
-                    <div class="flex">
-                      <input
-                        type="number"
-                        step="0.01"
-                        x-model.number="precoAtual"
-                        class="w-full p-2 border border-r-0 rounded-l focus:ring-2 focus:ring-blue-500 bg-slate-50 font-mono"
-                      />
-                      <button
-                        @click="buscarPrecoNaBrapi"
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-2 rounded-r text-xs font-bold"
-                        title="Buscar Preço Atual"
-                      >
-                        <svg
-                          class="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                          ></path>
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                </div>
+		::-webkit-scrollbar-thumb:hover {
+			background: #475569;
+		}
+	</style>
+</head>
 
-                <div class="pt-2 border-t border-slate-100">
-                  <label class="block text-xs font-semibold text-slate-500 mb-1"
-                    >Passo 1: FCLF Atual (Mi)</label
-                  >
-                  <input
-                    type="number"
-                    x-model.number="fclf"
-                    class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 font-mono"
-                  />
-                </div>
+<body class="bg-slate-900 font-sans text-slate-300 min-h-screen" x-data="valuationApp" x-cloak>
 
-                <div class="pt-2 border-t border-slate-100">
-                  <label class="block text-xs font-semibold text-slate-500 mb-1"
-                    >Passo 2: Anos de Projeção</label
-                  >
-                  <input
-                    type="number"
-                    x-model.number="anosProjecao"
-                    min="1"
-                    max="20"
-                    class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 bg-slate-50 font-bold"
-                  />
+	<div class="p-4 sm:p-8">
+		<div class="max-w-6xl mx-auto space-y-6">
 
-                  <label
-                    class="block text-[11px] font-semibold text-slate-500 mt-4 mb-2"
-                    >Crescimento por Ano (%)</label
-                  >
-                  <div class="grid grid-cols-3 gap-2">
-                    <template
-                      x-for="(taxa, index) in taxasCrescimento"
-                      :key="index"
-                    >
-                      <div
-                        class="bg-slate-50 p-1.5 rounded border border-slate-200"
-                      >
-                        <label
-                          class="text-[10px] text-slate-400 block text-center"
-                          x-text="'Ano ' + (index + 1)"
-                        ></label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          x-model.number="taxasCrescimento[index]"
-                          class="w-full p-1 text-sm border rounded focus:ring-1 focus:ring-blue-500 text-center font-semibold text-slate-700 bg-white"
-                        />
-                      </div>
-                    </template>
-                  </div>
-                </div>
+			<div
+				class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700 text-center relative overflow-hidden">
+				<button @click="fazerLogout"
+					class="absolute top-4 right-4 text-slate-400 hover:text-red-400 flex items-center gap-1 text-sm font-semibold transition-colors">
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+							d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
+						</path>
+					</svg>
+					Sair
+				</button>
 
-                <div
-                  class="grid grid-cols-2 gap-3 pt-4 border-t border-slate-100 mt-3"
-                >
-                  <div>
-                    <label
-                      class="block text-xs font-semibold text-slate-500 mb-1"
-                      >Passo 4: WACC (%)</label
-                    >
-                    <input
-                      type="number"
-                      step="0.1"
-                      x-model.number="wacc"
-                      class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      class="block text-xs font-semibold text-slate-500 mb-1"
-                      >Passo 6: Perpetuidade (%)</label
-                    >
-                    <input
-                      type="number"
-                      step="0.1"
-                      x-model.number="crescPerp"
-                      class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
+				<h1 class="text-3xl font-extrabold text-white tracking-tight">Valuation FCD (FCFF)</h1>
+				<p class="text-slate-400 mt-2">Siga o roteiro completo para precificar ações com segurança.</p>
 
-                <div
-                  class="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100"
-                >
-                  <div>
-                    <label
-                      class="block text-xs font-semibold text-slate-500 mb-1"
-                      >Passo 8: Dívida Líq. (Mi)</label
-                    >
-                    <input
-                      type="number"
-                      x-model.number="dividaLiquida"
-                      class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      class="block text-xs font-semibold text-slate-500 mb-1"
-                      >Passo 8: Total Ações (Mi)</label
-                    >
-                    <input
-                      type="number"
-                      x-model.number="numAcoes"
-                      class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 font-mono"
-                    />
-                  </div>
-                </div>
+				<div class="mt-5 flex justify-center">
+					<button @click="ocultarResultados = !ocultarResultados"
+						:class="ocultarResultados ? 'bg-amber-600 text-white border-amber-500 hover:bg-amber-500' : 'bg-slate-700 text-slate-200 border-slate-600 hover:bg-slate-600'"
+						class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all border shadow-md">
+						<span
+							x-text="ocultarResultados ? 'Modo Às Cegas: ATIVADO' : 'Ativar Modo de Estimativa às Cegas'"></span>
+					</button>
+				</div>
+			</div>
 
-                <div class="pt-2 border-t border-slate-100">
-                  <label class="block text-xs font-semibold text-slate-500 mb-1"
-                    >Passo 9: Margem Desejada (%)</label
-                  >
-                  <input
-                    type="number"
-                    x-model.number="margemSeguranca"
-                    class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
+			<template x-if="resultados.erro">
+				<div class="bg-red-900/50 border-l-4 border-red-500 text-red-300 p-4 rounded shadow-sm">
+					<strong>Erro Matemático:</strong> <span x-text="resultados.erro"></span>
+				</div>
+			</template>
 
-          <div class="lg:col-span-8 flex flex-col gap-6 relative min-h-[400px]">
-            <template x-if="ocultarResultados">
-              <div
-                class="bg-slate-800 text-white rounded-2xl p-8 flex flex-col items-center justify-center text-center flex-grow shadow-lg border border-slate-700 border-dashed"
-              >
-                <div class="bg-slate-700/50 p-4 rounded-full mb-4">
-                  <svg
-                    class="w-12 h-12 text-amber-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                    ></path>
-                  </svg>
-                </div>
-                <h3 class="text-xl font-bold tracking-tight">
-                  Modo de Estimativa às Cegas Ativo
-                </h3>
-                <p class="text-slate-400 max-w-sm mt-2 text-sm">
-                  Os cálculos de preço teto e fluxo de caixa estão rodando em
-                  segundo plano. Preencha suas premissas sem o viés do resultado
-                  final.
-                </p>
-                <button
-                  @click="ocultarResultados = false"
-                  class="mt-6 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-5 py-2.5 rounded-xl text-sm transition-colors shadow"
-                >
-                  Revelar Avaliação do Ativo
-                </button>
-              </div>
-            </template>
+			<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-            <template x-if="!ocultarResultados">
-              <div class="flex flex-col gap-6 flex-grow">
-                <div
-                  :class="`p-6 rounded-2xl shadow-md border ${resultados.status.bg} ${resultados.status.border}`"
-                >
-                  <div
-                    class="flex flex-col md:flex-row justify-between items-center gap-6"
-                  >
-                    <div>
-                      <p
-                        class="text-sm font-bold uppercase tracking-wide text-slate-500"
-                      >
-                        Veredito para <span x-text="ticker"></span>
-                      </p>
-                      <h2
-                        :class="`text-2xl sm:text-3xl font-black mt-1 ${resultados.status.cor}`"
-                        x-text="resultados.status.texto"
-                      ></h2>
-                      <p class="text-sm mt-2 text-slate-600">
-                        O preço atual é
-                        <strong x-text="formatMoney(precoAtual)"></strong>.
-                      </p>
-                    </div>
+				<div class="lg:col-span-4 space-y-6">
+					<div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700">
+						<h2
+							class="text-lg font-bold text-white mb-4 flex items-center gap-2 border-b border-slate-700 pb-2">
+							Dados e Premissas
+						</h2>
 
-                    <div class="flex gap-4 w-full md:w-auto">
-                      <div
-                        class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex-1 md:flex-none text-center min-w-[140px]"
-                      >
-                        <p class="text-xs font-bold text-slate-400 uppercase">
-                          Preço Justo
-                        </p>
-                        <p
-                          class="text-2xl font-black text-slate-800"
-                          x-text="formatMoney(resultados.precoJusto)"
-                        ></p>
-                      </div>
-                      <div
-                        class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex-1 md:flex-none text-center min-w-[140px] relative overflow-hidden"
-                      >
-                        <div
-                          class="absolute top-0 left-0 w-full h-1 bg-blue-500"
-                        ></div>
-                        <p class="text-xs font-bold text-slate-400 uppercase">
-                          Preço Teto
-                        </p>
-                        <p
-                          class="text-2xl font-black text-blue-700"
-                          x-text="formatMoney(resultados.precoTeto)"
-                        ></p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+						<div class="space-y-4">
+							<div class="bg-slate-900 p-3 rounded-lg border border-slate-700 text-xs mb-4">
+								<label class="block font-semibold text-slate-400 mb-1">Token Brapi (Opcional)</label>
+								<input type="text" x-model="brapiToken" placeholder="Cole seu token aqui..."
+									class="w-full p-1.5 bg-slate-800 border border-slate-600 rounded text-white focus:ring-1 focus:ring-blue-500 outline-none">
+							</div>
 
-                <div
-                  class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex-grow"
-                >
-                  <h3
-                    class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"
-                  >
-                    <svg
-                      class="w-5 h-5 text-slate-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      ></path>
-                    </svg>
-                    O Cálculo dos 9 Passos
-                  </h3>
+							<div class="grid grid-cols-2 gap-3">
+								<div>
+									<label class="block text-xs font-semibold text-slate-400 mb-1">Ticker</label>
+									<input type="text" x-model="ticker" @input="ticker = ticker.toUpperCase()"
+										class="w-full p-2 bg-slate-900 border border-slate-600 rounded focus:ring-2 focus:ring-blue-500 font-bold uppercase text-white outline-none" />
+								</div>
+								<div>
+									<label class="block text-xs font-semibold text-slate-400 mb-1">Preço Atual
+										(R$)</label>
+									<div class="flex">
+										<input type="number" step="0.01" x-model.number="precoAtual"
+											class="w-full p-2 bg-slate-900 border border-slate-600 border-r-0 rounded-l focus:ring-2 focus:ring-blue-500 font-mono text-white outline-none" />
+										<button @click="buscarPrecoNaBrapi"
+											class="bg-blue-600 hover:bg-blue-500 border border-blue-600 text-white px-2 rounded-r text-xs font-bold transition-colors">
+											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+													d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+											</svg>
+										</button>
+									</div>
+								</div>
+							</div>
 
-                  <div class="space-y-4">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div
-                        class="bg-slate-50 p-4 rounded-lg border border-slate-100"
-                      >
-                        <p class="text-xs font-bold text-slate-400">
-                          Passos 1 e 2
-                        </p>
-                        <p class="text-sm font-medium text-slate-700 mt-1">
-                          FCLF Inicial:
-                          <span
-                            class="font-mono text-slate-900"
-                            x-text="'R$ ' + formatNum(fclf)"
-                          ></span>
-                        </p>
-                        <p class="text-sm font-medium text-slate-700">
-                          Período:
-                          <span
-                            class="font-mono text-slate-900"
-                            x-text="anosProjecao + ' Anos'"
-                          ></span>
-                        </p>
-                      </div>
-                      <div
-                        class="bg-slate-50 p-4 rounded-lg border border-slate-100"
-                      >
-                        <p class="text-xs font-bold text-slate-400">
-                          Passos 3, 4 e 5 (Projeção e Desconto)
-                        </p>
-                        <p class="text-sm font-medium text-slate-700 mt-1">
-                          WACC:
-                          <span
-                            class="font-mono text-slate-900"
-                            x-text="wacc + '%'"
-                          ></span>
-                        </p>
-                        <p class="text-sm font-medium text-slate-700">
-                          Σ Valor Presente
-                          <span x-text="anosProjecao"></span> Anos:
-                          <span
-                            class="font-mono font-bold text-blue-600"
-                            x-text="'R$ ' + formatNum(resultados.somaPV)"
-                          ></span>
-                        </p>
-                      </div>
-                    </div>
+							<div class="pt-2 border-t border-slate-700">
+								<label class="block text-xs font-semibold text-slate-400 mb-1">Passo 1: FCLF Atual
+									(Mi)</label>
+								<input type="number" x-model.number="fclf"
+									class="w-full p-2 bg-slate-900 border border-slate-600 rounded focus:ring-2 focus:ring-blue-500 font-mono text-white outline-none" />
+							</div>
 
-                    <div
-                      class="bg-indigo-50 p-4 rounded-lg border border-indigo-100"
-                    >
-                      <p class="text-xs font-bold text-indigo-400">
-                        Passo 6: Valor Terminal (A partir do Ano
-                        <span x-text="anosProjecao + 1"></span>)
-                      </p>
-                      <div
-                        class="flex flex-col sm:flex-row justify-between mt-1 text-sm text-indigo-900"
-                      >
-                        <p>
-                          FCL Ano <span x-text="anosProjecao + 1"></span>: R$
-                          <span
-                            x-text="formatNum(resultados.fcfAnoSeguinte)"
-                          ></span>
-                        </p>
-                        <p>
-                          Valor Terminal Bruto: R$
-                          <span
-                            x-text="formatNum(resultados.valorTerminal)"
-                          ></span>
-                        </p>
-                        <p class="font-bold">
-                          VP Terminal:
-                          <span
-                            class="font-mono text-indigo-700"
-                            x-text="'R$ ' + formatNum(resultados.vpTerminal)"
-                          ></span>
-                        </p>
-                      </div>
-                    </div>
+							<div class="pt-2 border-t border-slate-700">
+								<label class="block text-xs font-semibold text-slate-400 mb-1">Passo 2: Anos de
+									Projeção</label>
+								<input type="number" x-model.number="anosProjecao" min="1" max="20"
+									class="w-full p-2 bg-slate-900 border border-slate-600 rounded focus:ring-2 focus:ring-blue-500 font-bold text-white outline-none" />
 
-                    <div
-                      class="bg-slate-50 p-4 rounded-lg border border-slate-100 flex justify-between items-center"
-                    >
-                      <div>
-                        <p class="text-xs font-bold text-slate-400">
-                          Passo 7: Enterprise Value
-                        </p>
-                        <p class="text-xs text-slate-500">
-                          Soma PV (Passo 5) + VP Terminal (Passo 6)
-                        </p>
-                      </div>
-                      <p
-                        class="text-lg font-black font-mono text-slate-800"
-                        x-text="'R$ ' + formatNum(resultados.ev)"
-                      ></p>
-                    </div>
+								<label class="block text-[11px] font-semibold text-slate-500 mt-4 mb-2">Crescimento por
+									Ano (%)</label>
+								<div class="grid grid-cols-3 gap-2">
+									<template x-for="(taxa, index) in taxasCrescimento" :key="index">
+										<div class="bg-slate-900 p-1.5 rounded border border-slate-700">
+											<label class="text-[10px] text-slate-500 block text-center"
+												x-text="'Ano ' + (index + 1)"></label>
+											<input type="number" step="0.1" x-model.number="taxasCrescimento[index]"
+												class="w-full p-1 text-sm bg-slate-800 border border-slate-600 rounded focus:ring-1 focus:ring-blue-500 text-center font-semibold text-white outline-none" />
+										</div>
+									</template>
+								</div>
+							</div>
 
-                    <div
-                      class="bg-slate-50 p-4 rounded-lg border border-slate-100 flex justify-between items-center"
-                    >
-                      <div>
-                        <p class="text-xs font-bold text-slate-400">
-                          Passo 8: Equity Value e Preço Justo
-                        </p>
-                        <p class="text-xs text-slate-500">
-                          EV - Dívida (R$
-                          <span x-text="formatNum(dividaLiquida)"></span>) = R$
-                          <span x-text="formatNum(resultados.equity)"></span>
-                        </p>
-                        <p class="text-xs text-slate-500">
-                          Dividido por
-                          <span x-text="formatNum(numAcoes)"></span> ações
-                        </p>
-                      </div>
-                      <div class="text-right">
-                        <p class="text-lg font-black font-mono text-slate-800">
-                          <span
-                            x-text="formatMoney(resultados.precoJusto)"
-                          ></span
-                          >/ação
-                        </p>
-                      </div>
-                    </div>
+							<div class="grid grid-cols-2 gap-3 pt-4 border-t border-slate-700 mt-3">
+								<div>
+									<label class="block text-xs font-semibold text-slate-400 mb-1">Passo 4: WACC
+										(%)</label>
+									<input type="number" step="0.1" x-model.number="wacc"
+										class="w-full p-2 bg-slate-900 border border-slate-600 rounded focus:ring-2 focus:ring-blue-500 text-white outline-none" />
+								</div>
+								<div>
+									<label class="block text-xs font-semibold text-slate-400 mb-1">Passo 6: Perpetuidade
+										(%)</label>
+									<input type="number" step="0.1" x-model.number="crescPerp"
+										class="w-full p-2 bg-slate-900 border border-slate-600 rounded focus:ring-2 focus:ring-blue-500 text-white outline-none" />
+								</div>
+							</div>
 
-                    <div
-                      class="bg-emerald-50 p-4 rounded-lg border border-emerald-200 flex justify-between items-center shadow-sm"
-                    >
-                      <div>
-                        <p
-                          class="text-xs font-bold text-emerald-600 uppercase tracking-wide"
-                        >
-                          Passo 9: Preço Teto de Compra
-                        </p>
-                        <p class="text-xs text-emerald-700">
-                          Preço Justo com
-                          <span x-text="margemSeguranca"></span>% de Margem de
-                          Segurança
-                        </p>
-                      </div>
-                      <div class="text-right">
-                        <p
-                          class="text-xl font-black font-mono text-emerald-800"
-                          x-text="formatMoney(resultados.precoTeto)"
-                        ></p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+							<div class="grid grid-cols-2 gap-3 pt-2 border-t border-slate-700">
+								<div>
+									<label class="block text-xs font-semibold text-slate-400 mb-1">Passo 8: Dívida Líq.
+										(Mi)</label>
+									<input type="number" x-model.number="dividaLiquida"
+										class="w-full p-2 bg-slate-900 border border-slate-600 rounded focus:ring-2 focus:ring-blue-500 font-mono text-white outline-none" />
+								</div>
+								<div>
+									<label class="block text-xs font-semibold text-slate-400 mb-1">Passo 8: Total Ações
+										(Mi)</label>
+									<input type="number" x-model.number="numAcoes"
+										class="w-full p-2 bg-slate-900 border border-slate-600 rounded focus:ring-2 focus:ring-blue-500 font-mono text-white outline-none" />
+								</div>
+							</div>
 
-                <div
-                  class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"
-                >
-                  <h3
-                    class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 border-b pb-2"
-                  >
-                    Detalhes da Projeção (Passo 3 e 5)
-                  </h3>
-                  <div class="overflow-x-auto">
-                    <table class="w-full text-sm text-left">
-                      <thead
-                        class="bg-slate-50 text-slate-500 text-xs uppercase"
-                      >
-                        <tr>
-                          <th class="px-4 py-2 rounded-tl-lg">Ano</th>
-                          <th class="px-4 py-2">Cresc. (%)</th>
-                          <th class="px-4 py-2">FCLF Projetado</th>
-                          <th class="px-4 py-2 text-right rounded-tr-lg">
-                            Valor Presente
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody class="divide-y divide-slate-100">
-                        <template
-                          x-for="p in resultados.projecoes"
-                          :key="p.ano"
-                        >
-                          <tr class="hover:bg-slate-50">
-                            <td
-                              class="px-4 py-2 font-medium"
-                              x-text="'Ano ' + p.ano"
-                            ></td>
-                            <td
-                              class="px-4 py-2 text-slate-500"
-                              x-text="p.g + '%'"
-                            ></td>
-                            <td
-                              class="px-4 py-2 font-mono text-slate-600"
-                              x-text="'R$ ' + formatNum(p.fcf)"
-                            ></td>
-                            <td
-                              class="px-4 py-2 font-mono text-right font-semibold text-blue-600"
-                              x-text="'R$ ' + formatNum(p.vp)"
-                            ></td>
-                          </tr>
-                        </template>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </template>
-          </div>
-        </div>
-      </div>
-    </div>
+							<div class="pt-2 border-t border-slate-700">
+								<label class="block text-xs font-semibold text-slate-400 mb-1">Passo 9: Margem Desejada
+									(%)</label>
+								<input type="number" x-model.number="margemSeguranca"
+									class="w-full p-2 bg-slate-900 border border-slate-600 rounded focus:ring-2 focus:ring-blue-500 text-white outline-none" />
+							</div>
+						</div>
+					</div>
+				</div>
 
-    <script>
-      document.addEventListener("alpine:init", () => {
-        Alpine.data("valuationApp", () => ({
-          ticker: "VALE3",
-          precoAtual: 62.5,
-          fclf: 25000,
-          anosProjecao: 5,
-          taxasCrescimento: [5.0, 5.0, 4.0, 4.0, 3.0],
-          wacc: 12.0,
-          crescPerp: 2.5,
-          dividaLiquida: 35000,
-          numAcoes: 4500,
-          margemSeguranca: 20,
-          ocultarResultados: false,
-          brapiToken: "",
+				<div class="lg:col-span-8 flex flex-col gap-6 relative min-h-[400px]">
 
-          init() {
-            // Monitora mudanças no número de anos para recriar as caixas de texto
-            this.$watch("anosProjecao", (val) => {
-              let num = parseInt(val) || 1;
-              if (num > 20) num = 20;
-              if (num < 1) num = 1;
+					<template x-if="ocultarResultados">
+						<div
+							class="bg-slate-800 text-slate-300 rounded-2xl p-8 flex flex-col items-center justify-center text-center flex-grow shadow-lg border border-slate-700 border-dashed">
+							<div class="bg-slate-900 p-4 rounded-full mb-4">
+								<svg class="w-12 h-12 text-amber-500" fill="none" stroke="currentColor"
+									viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+										d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+									</path>
+								</svg>
+							</div>
+							<h3 class="text-xl font-bold tracking-tight text-white">Modo de Estimativa às Cegas Ativo
+							</h3>
+							<p class="max-w-sm mt-2 text-sm text-slate-400">
+								Os cálculos estão rodando em segundo plano. Preencha suas premissas sem o viés do
+								resultado final.
+							</p>
+							<button @click="ocultarResultados = false"
+								class="mt-6 bg-amber-600 hover:bg-amber-500 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors shadow">
+								Revelar Avaliação
+							</button>
+						</div>
+					</template>
 
-              const newArray = [...this.taxasCrescimento];
-              if (num > newArray.length) {
-                const lastRate =
-                  newArray.length > 0 ? newArray[newArray.length - 1] : 0;
-                for (let i = newArray.length; i < num; i++)
-                  newArray.push(lastRate);
-              } else if (num < newArray.length) {
-                newArray.length = num;
-              }
-              this.taxasCrescimento = newArray;
-            });
-          },
+					<template x-if="!ocultarResultados">
+						<div class="flex flex-col gap-6 flex-grow">
 
-          buscarPrecoNaBrapi() {
-            if (!this.brapiToken) {
-              alert("Por favor, insira seu Token da Brapi no campo designado.");
-              return;
-            }
-            if (!this.ticker) return;
+							<div
+								:class="`p-6 rounded-2xl shadow-lg border ${resultados.status.bg} ${resultados.status.border}`">
+								<div class="flex flex-col md:flex-row justify-between items-center gap-6">
+									<div>
+										<p class="text-sm font-bold uppercase tracking-wide text-slate-400">Veredito
+											para <span x-text="ticker" class="text-slate-300"></span></p>
+										<h2 :class="`text-2xl sm:text-3xl font-black mt-1 ${resultados.status.cor}`"
+											x-text="resultados.status.texto"></h2>
+										<p class="text-sm mt-2 text-slate-400">O preço atual é <strong
+												class="text-slate-200" x-text="formatMoney(precoAtual)"></strong>.</p>
+									</div>
+									<div class="flex gap-4 w-full md:w-auto">
+										<div
+											class="bg-slate-900 p-4 rounded-xl shadow-inner border border-slate-700 flex-1 text-center min-w-[140px]">
+											<p class="text-xs font-bold text-slate-500 uppercase">Preço Justo</p>
+											<p class="text-2xl font-black text-white"
+												x-text="formatMoney(resultados.precoJusto)"></p>
+										</div>
+										<div
+											class="bg-slate-900 p-4 rounded-xl shadow-inner border border-slate-700 flex-1 text-center min-w-[140px] relative overflow-hidden">
+											<div class="absolute top-0 left-0 w-full h-1 bg-blue-500"></div>
+											<p class="text-xs font-bold text-slate-500 uppercase">Preço Teto</p>
+											<p class="text-2xl font-black text-blue-400"
+												x-text="formatMoney(resultados.precoTeto)"></p>
+										</div>
+									</div>
+								</div>
+							</div>
 
-            fetch(
-              `https://brapi.dev/api/quote/${this.ticker}?token=${this.brapiToken}`,
-            )
-              .then((res) => res.json())
-              .then((data) => {
-                if (
-                  data.results &&
-                  data.results.length > 0 &&
-                  data.results[0].regularMarketPrice
-                ) {
-                  this.precoAtual = data.results[0].regularMarketPrice;
-                } else {
-                  alert("Cotação não encontrada. Verifique o Ticker.");
-                }
-              })
-              .catch((err) => {
-                alert("Erro ao buscar a cotação na Brapi.");
-                console.error(err);
-              });
-          },
+							<div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700 flex-grow">
+								<h3 class="text-lg font-bold text-white mb-6 flex items-center gap-2">
+									<svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor"
+										viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+											d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+										</path>
+									</svg>
+									O Cálculo dos 9 Passos
+								</h3>
 
-          // O Getter no Alpine age como o useMemo no React (recalcula sozinho)
-          get resultados() {
-            const r = (parseFloat(this.wacc) || 0) / 100;
-            const gPerp = (parseFloat(this.crescPerp) || 0) / 100;
+								<div class="space-y-4">
+									<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+										<div class="bg-slate-900 p-4 rounded-lg border border-slate-700">
+											<p class="text-xs font-bold text-slate-500">Passos 1 e 2</p>
+											<p class="text-sm font-medium text-slate-300 mt-1">FCLF Inicial: <span
+													class="font-mono text-white"
+													x-text="'R$ ' + formatNum(fclf)"></span></p>
+											<p class="text-sm font-medium text-slate-300">Período: <span
+													class="font-mono text-white" x-text="anosProjecao + ' Anos'"></span>
+											</p>
+										</div>
+										<div class="bg-slate-900 p-4 rounded-lg border border-slate-700">
+											<p class="text-xs font-bold text-slate-500">Passos 3, 4 e 5 (Projeção e
+												Desconto)</p>
+											<p class="text-sm font-medium text-slate-300 mt-1">WACC: <span
+													class="font-mono text-white" x-text="wacc + '%'"></span></p>
+											<p class="text-sm font-medium text-slate-300">Σ Valor Presente <span
+													x-text="anosProjecao"></span> Anos: <span
+													class="font-mono font-bold text-blue-400"
+													x-text="'R$ ' + formatNum(resultados.somaPV)"></span></p>
+										</div>
+									</div>
 
-            let erro = null;
-            if (r <= gPerp)
-              erro =
-                "A Taxa de Desconto (WACC) deve ser maior que o Crescimento na Perpetuidade.";
+									<div class="bg-indigo-900/30 p-4 rounded-lg border border-indigo-500/30">
+										<p class="text-xs font-bold text-indigo-400">Passo 6: Valor Terminal (A partir
+											do Ano <span x-text="anosProjecao + 1"></span>)</p>
+										<div
+											class="flex flex-col sm:flex-row justify-between mt-1 text-sm text-indigo-200">
+											<p>FCL Ano <span x-text="anosProjecao + 1"></span>: R$ <span
+													x-text="formatNum(resultados.fcfAnoSeguinte)"></span></p>
+											<p>Valor Terminal Bruto: R$ <span
+													x-text="formatNum(resultados.valorTerminal)"></span></p>
+											<p class="font-bold text-indigo-300">VP Terminal: <span
+													class="font-mono text-indigo-400"
+													x-text="'R$ ' + formatNum(resultados.vpTerminal)"></span></p>
+										</div>
+									</div>
 
-            let fluxoAtual = parseFloat(this.fclf) || 0;
-            let somaPV = 0;
-            let projecoes = [];
+									<div
+										class="bg-slate-900 p-4 rounded-lg border border-slate-700 flex justify-between items-center">
+										<div>
+											<p class="text-xs font-bold text-slate-500">Passo 7: Enterprise Value</p>
+											<p class="text-xs text-slate-400">Soma PV (Passo 5) + VP Terminal (Passo 6)
+											</p>
+										</div>
+										<p class="text-lg font-black font-mono text-white"
+											x-text="'R$ ' + formatNum(resultados.ev)"></p>
+									</div>
 
-            for (let i = 1; i <= this.anosProjecao; i++) {
-              const g = (parseFloat(this.taxasCrescimento[i - 1]) || 0) / 100;
-              fluxoAtual = fluxoAtual * (1 + g);
-              const pv = fluxoAtual / Math.pow(1 + r, i);
-              somaPV += pv;
-              projecoes.push({
-                ano: i,
-                g: (g * 100).toFixed(2),
-                fcf: fluxoAtual,
-                vp: pv,
-              });
-            }
+									<div
+										class="bg-slate-900 p-4 rounded-lg border border-slate-700 flex justify-between items-center">
+										<div>
+											<p class="text-xs font-bold text-slate-500">Passo 8: Equity Value e Preço
+												Justo</p>
+											<p class="text-xs text-slate-400">EV - Dívida (R$ <span
+													x-text="formatNum(dividaLiquida)"></span>) = R$ <span
+													x-text="formatNum(resultados.equity)"></span></p>
+											<p class="text-xs text-slate-400">Dividido por <span
+													x-text="formatNum(numAcoes)"></span> ações</p>
+										</div>
+										<div class="text-right">
+											<p class="text-lg font-black font-mono text-white"><span
+													x-text="formatMoney(resultados.precoJusto)"></span>/ação</p>
+										</div>
+									</div>
 
-            const fcfAnoSeguinte = fluxoAtual * (1 + gPerp);
-            const valorTerminal = r > gPerp ? fcfAnoSeguinte / (r - gPerp) : 0;
-            const vpTerminal =
-              valorTerminal / Math.pow(1 + r, this.anosProjecao);
+									<div
+										class="bg-emerald-900/30 p-4 rounded-lg border border-emerald-500/30 flex justify-between items-center">
+										<div>
+											<p class="text-xs font-bold text-emerald-500 uppercase tracking-wide">Passo
+												9: Preço Teto de Compra</p>
+											<p class="text-xs text-emerald-400/80">Preço Justo com <span
+													x-text="margemSeguranca"></span>% de Margem de Segurança</p>
+										</div>
+										<div class="text-right">
+											<p class="text-xl font-black font-mono text-emerald-400"
+												x-text="formatMoney(resultados.precoTeto)"></p>
+										</div>
+									</div>
+								</div>
+							</div>
 
-            const ev = somaPV + vpTerminal;
-            const dLiquida = parseFloat(this.dividaLiquida) || 0;
-            const nAcoes = parseFloat(this.numAcoes) || 0;
-            const equity = ev - dLiquida;
+							<div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700">
+								<h3
+									class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-700 pb-2">
+									Detalhes da Projeção</h3>
+								<div class="overflow-x-auto">
+									<table class="w-full text-sm text-left text-slate-300">
+										<thead class="bg-slate-900 text-slate-500 text-xs uppercase">
+											<tr>
+												<th class="px-4 py-3 rounded-tl-lg font-bold">Ano</th>
+												<th class="px-4 py-3 font-bold">Cresc. (%)</th>
+												<th class="px-4 py-3 font-bold">FCLF Projetado</th>
+												<th class="px-4 py-3 text-right rounded-tr-lg font-bold">Valor Presente
+												</th>
+											</tr>
+										</thead>
+										<tbody class="divide-y divide-slate-700/50">
+											<template x-for="p in resultados.projecoes" :key="p.ano">
+												<tr class="hover:bg-slate-700/50 transition-colors">
+													<td class="px-4 py-3 font-medium text-slate-200"
+														x-text="'Ano ' + p.ano"></td>
+													<td class="px-4 py-3 text-slate-400" x-text="p.g + '%'"></td>
+													<td class="px-4 py-3 font-mono text-slate-300"
+														x-text="'R$ ' + formatNum(p.fcf)"></td>
+													<td class="px-4 py-3 font-mono text-right font-semibold text-blue-400"
+														x-text="'R$ ' + formatNum(p.vp)"></td>
+												</tr>
+											</template>
+										</tbody>
+									</table>
+								</div>
+							</div>
 
-            const precoJusto = nAcoes > 0 ? Math.max(0, equity / nAcoes) : 0;
-            const mSeguranca = parseFloat(this.margemSeguranca) || 0;
-            const precoTeto = precoJusto * (1 - mSeguranca / 100);
+						</div>
+					</template>
 
-            let status = {
-              texto: "AGUARDAR",
-              cor: "text-amber-500",
-              bg: "bg-amber-50",
-              border: "border-amber-500",
-            };
-            const precoA = parseFloat(this.precoAtual) || 0;
+				</div>
+			</div>
+		</div>
+	</div>
 
-            if (precoJusto === 0 || erro) {
-              status = {
-                texto: "INVIÁVEL",
-                cor: "text-red-600",
-                bg: "bg-red-50",
-                border: "border-red-600",
-              };
-            } else if (precoA <= precoTeto) {
-              status = {
-                texto: "COMPRAR (Abaixo do Teto)",
-                cor: "text-emerald-600",
-                bg: "bg-emerald-50",
-                border: "border-emerald-600",
-              };
-            } else if (precoA < precoJusto) {
-              status = {
-                texto: "COMPRAR (Sem Margem)",
-                cor: "text-blue-600",
-                bg: "bg-blue-50",
-                border: "border-blue-600",
-              };
-            } else {
-              status = {
-                texto: "NÃO COMPRAR (Cara)",
-                cor: "text-red-600",
-                bg: "bg-red-50",
-                border: "border-red-600",
-              };
-            }
+	<script>
+		document.addEventListener('alpine:init', () => {
+			Alpine.data('valuationApp', () => ({
+				ticker: 'VALE3',
+				precoAtual: 62.50,
+				fclf: 25000,
+				anosProjecao: 5,
+				taxasCrescimento: [5.0, 5.0, 4.0, 4.0, 3.0],
+				wacc: 12.0,
+				crescPerp: 2.5,
+				dividaLiquida: 35000,
+				numAcoes: 4500,
+				margemSeguranca: 20,
+				ocultarResultados: false,
+				brapiToken: '',
 
-            return {
-              erro,
-              somaPV,
-              fcfAnoSeguinte,
-              valorTerminal,
-              vpTerminal,
-              ev,
-              equity,
-              precoJusto,
-              precoTeto,
-              projecoes,
-              status,
-            };
-          },
+				init() {
+					this.$watch('anosProjecao', (val) => {
+						let num = parseInt(val) || 1;
+						if (num > 20) num = 20;
+						if (num < 1) num = 1;
 
-          // Formatadores de texto
-          formatMoney(val) {
-            return new Intl.NumberFormat("pt-BR", {
-              style: "currency",
-              currency: "BRL",
-            }).format(val || 0);
-          },
-          formatNum(val) {
-            return new Intl.NumberFormat("pt-BR", {
-              maximumFractionDigits: 0,
-            }).format(val || 0);
-          },
-        }));
-      });
-    </script>
-  </body>
+						const newArray = [...this.taxasCrescimento];
+						if (num > newArray.length) {
+							const lastRate = newArray.length > 0 ? newArray[newArray.length - 1] : 0;
+							for (let i = newArray.length; i < num; i++) newArray.push(lastRate);
+						} else if (num < newArray.length) {
+							newArray.length = num;
+						}
+						this.taxasCrescimento = newArray;
+					});
+				},
+
+				fazerLogout() {
+					fetch('/logout', {method: 'POST'}).then(() => {
+						window.location.href = '/';
+					});
+				},
+
+				buscarPrecoNaBrapi() {
+					if (!this.brapiToken || !this.ticker) return;
+					fetch(`https://brapi.dev/api/quote/${this.ticker}?token=${this.brapiToken}`)
+						.then(res => res.json())
+						.then(data => {
+							if (data.results && data.results.length > 0 && data.results[0].regularMarketPrice) {
+								this.precoAtual = data.results[0].regularMarketPrice;
+							}
+						});
+				},
+
+				get resultados() {
+					const r = (parseFloat(this.wacc) || 0) / 100;
+					const gPerp = (parseFloat(this.crescPerp) || 0) / 100;
+
+					let erro = null;
+					if (r <= gPerp) erro = "WACC deve ser maior que a Perpetuidade.";
+
+					let fluxoAtual = parseFloat(this.fclf) || 0;
+					let somaPV = 0;
+					let projecoes = [];
+
+					for (let i = 1; i <= this.anosProjecao; i++) {
+						const g = (parseFloat(this.taxasCrescimento[i - 1]) || 0) / 100;
+						fluxoAtual = fluxoAtual * (1 + g);
+						const pv = fluxoAtual / Math.pow(1 + r, i);
+						somaPV += pv;
+						projecoes.push({ano: i, g: (g * 100).toFixed(2), fcf: fluxoAtual, vp: pv});
+					}
+
+					const fcfAnoSeguinte = fluxoAtual * (1 + gPerp);
+					const valorTerminal = r > gPerp ? fcfAnoSeguinte / (r - gPerp) : 0;
+					const vpTerminal = valorTerminal / Math.pow(1 + r, this.anosProjecao);
+
+					const ev = somaPV + vpTerminal;
+					const dLiquida = parseFloat(this.dividaLiquida) || 0;
+					const nAcoes = parseFloat(this.numAcoes) || 0;
+					const equity = ev - dLiquida;
+
+					const precoJusto = nAcoes > 0 ? Math.max(0, equity / nAcoes) : 0;
+					const mSeguranca = parseFloat(this.margemSeguranca) || 0;
+					const precoTeto = precoJusto * (1 - (mSeguranca / 100));
+
+					// Paleta Dark Mode para os vereditos
+					let status = {texto: 'AGUARDAR', cor: 'text-amber-400', bg: 'bg-amber-900/20', border: 'border-amber-700/50'};
+					const precoA = parseFloat(this.precoAtual) || 0;
+
+					if (precoJusto === 0 || erro) {
+						status = {texto: 'INVIÁVEL', cor: 'text-red-400', bg: 'bg-red-900/20', border: 'border-red-700/50'};
+					} else if (precoA <= precoTeto) {
+						status = {texto: 'COMPRAR (Abaixo do Teto)', cor: 'text-emerald-400', bg: 'bg-emerald-900/20', border: 'border-emerald-700/50'};
+					} else if (precoA < precoJusto) {
+						status = {texto: 'COMPRAR (Sem Margem)', cor: 'text-blue-400', bg: 'bg-blue-900/20', border: 'border-blue-700/50'};
+					} else {
+						status = {texto: 'NÃO COMPRAR (Cara)', cor: 'text-red-400', bg: 'bg-red-900/20', border: 'border-red-700/50'};
+					}
+
+					return {
+						erro, somaPV, fcfAnoSeguinte, valorTerminal, vpTerminal, ev, equity, precoJusto, precoTeto, projecoes, status
+					};
+				},
+
+				formatMoney(val) {return new Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'}).format(val || 0);},
+				formatNum(val) {return new Intl.NumberFormat('pt-BR', {maximumFractionDigits: 0}).format(val || 0);}
+			}));
+		});
+	</script>
+</body>
+
 </html>
