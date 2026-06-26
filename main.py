@@ -160,20 +160,24 @@ def get_user_by_username(db: Session, username: str):
     return db.query(UserDB).filter(UserDB.username == username).first()
 
 
-def get_current_user_id(token: str = Depends(oauth2_scheme)) -> int:
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Token de autenticação inválido ou expirado.",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+# Substitua a função get_current_user_id atual por esta:
+def get_current_user_id(request: Request) -> int:
+    token = request.cookies.get("access_token")
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Não autenticado. Cookie ausente.",
+        )
+
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        scheme, _, param = token.partition(" ")
+        payload = jwt.decode(param, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
         if user_id is None:
-            raise credentials_exception
+            raise HTTPException(status_code=401, detail="Token inválido")
         return int(user_id)
     except JWTError:
-        raise credentials_exception
+        raise HTTPException(status_code=401, detail="Token expirado ou inválido")
 
 
 # ==========================================
@@ -331,3 +335,27 @@ async def get_quote(ticker: str, request: Request):
             )
 
         return resposta.json()
+
+
+@app.delete("/valuations/{valuation_id}")
+def delete_valuation(
+    valuation_id: int,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+):
+    # Procura a avaliação no banco de dados garantindo que pertence ao utilizador logado
+    valuation = (
+        db.query(ValuationDB)
+        .filter(ValuationDB.id == valuation_id, ValuationDB.usuario_id == user_id)
+        .first()
+    )
+
+    if not valuation:
+        raise HTTPException(
+            status_code=404,
+            detail="Registo não encontrado ou não tem permissão para o eliminar.",
+        )
+
+    db.delete(valuation)
+    db.commit()
+    return {"message": "Valuation eliminado com sucesso."}
