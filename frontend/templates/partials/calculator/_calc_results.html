@@ -1,0 +1,218 @@
+<template x-if="!ocultarResultados">
+  <div class="flex flex-col gap-6 flex-grow">
+    {# ── Verdict card ───────────────────────────────────────────────────────
+    #}
+    <div
+      :class="`p-6 rounded-2xl shadow-lg border ${resultados.status.bg} ${resultados.status.border}`"
+    >
+      <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+        <div>
+          <p class="text-sm font-bold uppercase tracking-wide text-slate-400">
+            Veredito para <span x-text="ticker" class="text-slate-300"></span>
+          </p>
+          <h2
+            :class="`text-2xl sm:text-3xl font-black mt-1 ${resultados.status.cor}`"
+            x-text="resultados.status.texto"
+          ></h2>
+          <p class="text-sm mt-2 text-slate-400">
+            O preço atual é
+            <strong
+              class="text-slate-200"
+              x-text="formatMoney(precoAtual)"
+            ></strong
+            >.
+          </p>
+        </div>
+
+        <div class="flex gap-4 w-full md:w-auto">
+          {# Preço Justo #}
+          <div
+            class="bg-slate-900 p-4 rounded-xl shadow-inner border border-slate-700 flex-1 text-center min-w-[140px]"
+          >
+            <p class="text-xs font-bold text-slate-500 uppercase">
+              Preço Justo
+            </p>
+            <p
+              class="text-2xl font-black text-white"
+              x-text="formatMoney(resultados.precoJusto)"
+            ></p>
+          </div>
+          {# Preço Teto #}
+          <div
+            class="bg-slate-900 p-4 rounded-xl shadow-inner border border-slate-700 flex-1 text-center min-w-[140px] relative overflow-hidden"
+          >
+            <div class="absolute top-0 left-0 w-full h-1 bg-blue-500"></div>
+            <p class="text-xs font-bold text-slate-500 uppercase">Preço Teto</p>
+            <p
+              class="text-2xl font-black text-blue-400"
+              x-text="formatMoney(resultados.precoTeto)"
+            ></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ── 9-Steps summary ────────────────────────────────────────────────────
+    #}
+    <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700">
+      <h3 class="text-lg font-bold text-white mb-6 flex items-center gap-2">
+        O Cálculo dos 9 Passos
+      </h3>
+
+      <div class="space-y-4">
+        {# Passos 1–2 and 3–5 #}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="bg-slate-900 p-4 rounded-lg border border-slate-700">
+            <p class="text-xs font-bold text-slate-500">Passos 1 e 2</p>
+            <p class="text-sm font-medium text-slate-300 mt-1">
+              FCLF Inicial:
+              <span
+                class="font-mono text-white"
+                x-text="'R$ ' + formatNum(fclf)"
+              ></span>
+            </p>
+            <p class="text-sm font-medium text-slate-300">
+              Período:
+              <span
+                class="font-mono text-white"
+                x-text="anosProjecao + ' Anos'"
+              ></span>
+            </p>
+          </div>
+          <div class="bg-slate-900 p-4 rounded-lg border border-slate-700">
+            <p class="text-xs font-bold text-slate-500">Passos 3, 4 e 5</p>
+            <p class="text-sm font-medium text-slate-300 mt-1">
+              WACC:
+              <span class="font-mono text-white" x-text="wacc + '%'"></span>
+            </p>
+            <p class="text-sm font-medium text-slate-300">
+              Σ Valor Presente:
+              <span
+                class="font-mono font-bold text-blue-400"
+                x-text="'R$ ' + formatNum(resultados.somaPV)"
+              ></span>
+            </p>
+          </div>
+        </div>
+
+        {# Passo 6: Valor Terminal #}
+        <div
+          class="bg-indigo-900/30 p-4 rounded-lg border border-indigo-500/30"
+        >
+          <p class="text-xs font-bold text-indigo-400">
+            Passo 6: Valor Terminal (A partir do Ano
+            <span x-text="anosProjecao + 1"></span>)
+          </p>
+          <div
+            class="flex flex-col sm:flex-row justify-between mt-1 text-sm text-indigo-200"
+          >
+            <p>
+              Valor Terminal Bruto: R$
+              <span x-text="formatNum(resultados.valorTerminal)"></span>
+            </p>
+            <p class="font-bold text-indigo-300">
+              VP Terminal:
+              <span
+                class="font-mono text-indigo-400"
+                x-text="'R$ ' + formatNum(resultados.vpTerminal)"
+              ></span>
+            </p>
+          </div>
+        </div>
+
+        {# Passo 7: Enterprise Value #}
+        <div
+          class="bg-slate-900 p-4 rounded-lg border border-slate-700 flex justify-between items-center"
+        >
+          <p class="text-xs font-bold text-slate-500">
+            Passo 7: Enterprise Value
+          </p>
+          <p
+            class="text-lg font-black font-mono text-white"
+            x-text="'R$ ' + formatNum(resultados.ev)"
+          ></p>
+        </div>
+
+        {# Passo 8: Equity Value / Preço Justo #}
+        <div
+          class="bg-slate-900 p-4 rounded-lg border border-slate-700 flex justify-between items-center"
+        >
+          <div>
+            <p class="text-xs font-bold text-slate-500">
+              Passo 8: Equity Value e Preço Justo
+            </p>
+            <p class="text-xs text-slate-400">
+              EV - Dívida Dividido pelas Ações
+            </p>
+          </div>
+          <p class="text-lg font-black font-mono text-white">
+            <span x-text="formatMoney(resultados.precoJusto)"></span>/ação
+          </p>
+        </div>
+
+        {# Passo 9: Preço Teto #}
+        <div
+          class="bg-emerald-900/30 p-4 rounded-lg border border-emerald-500/30 flex justify-between items-center"
+        >
+          <div>
+            <p
+              class="text-xs font-bold text-emerald-500 uppercase tracking-wide"
+            >
+              Passo 9: Preço Teto
+            </p>
+            <p class="text-xs text-emerald-400/80">
+              Com <span x-text="margemSeguranca"></span>% de Margem
+            </p>
+          </div>
+          <p
+            class="text-xl font-black font-mono text-emerald-400"
+            x-text="formatMoney(resultados.precoTeto)"
+          ></p>
+        </div>
+      </div>
+    </div>
+
+    {# ── Projection detail table ─────────────────────────────────────────────
+    #}
+    <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700">
+      <h3
+        class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-700 pb-2"
+      >
+        Detalhes da Projeção
+      </h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left text-slate-300">
+          <thead class="bg-slate-900 text-slate-500 text-xs uppercase">
+            <tr>
+              <th class="px-4 py-3 rounded-tl-lg font-bold">Ano</th>
+              <th class="px-4 py-3 font-bold">Cresc. (%)</th>
+              <th class="px-4 py-3 font-bold">FCLF Projetado</th>
+              <th class="px-4 py-3 text-right rounded-tr-lg font-bold">
+                Valor Presente
+              </th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-700/50">
+            <template x-for="p in resultados.projecoes" :key="p.ano">
+              <tr class="hover:bg-slate-700/50 transition-colors">
+                <td
+                  class="px-4 py-3 font-medium text-slate-200"
+                  x-text="'Ano ' + p.ano"
+                ></td>
+                <td class="px-4 py-3 text-slate-400" x-text="p.g + '%'"></td>
+                <td
+                  class="px-4 py-3 font-mono text-slate-300"
+                  x-text="'R$ ' + formatNum(p.fcf)"
+                ></td>
+                <td
+                  class="px-4 py-3 font-mono text-right font-semibold text-blue-400"
+                  x-text="'R$ ' + formatNum(p.vp)"
+                ></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</template>
