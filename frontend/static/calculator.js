@@ -1,5 +1,3 @@
-// frontend/static/calculator.js
-
 document.addEventListener("alpine:init", () => {
   Alpine.data("valuationApp", () => ({
     // Estado das Abas e Histórico
@@ -9,8 +7,9 @@ document.addEventListener("alpine:init", () => {
     filtroApenasRecentes: true, // Novo: Controla o filtro da tabela (Padrão: Mostra o último de cada)
 
     // Variáveis da Calculadora
-    ticker: "VALE3",
-    precoAtual: 62.5,
+    // tickersList holds one entry per class share being compared.
+    // Only ticker + precoAtual differ — all DCF premissas are shared.
+    tickersList: [{ ticker: "VALE3", precoAtual: 62.5 }],
     fclf: 25000,
     anosProjecao: 5,
     taxasCrescimento: [5.0, 5.0, 4.0, 4.0, 3.0],
@@ -20,6 +19,14 @@ document.addEventListener("alpine:init", () => {
     numAcoes: 4500,
     margemSeguranca: 20,
     ocultarResultados: false,
+
+    adicionarTicker() {
+      this.tickersList.push({ ticker: "", precoAtual: 0 });
+    },
+
+    removerTicker(index) {
+      if (this.tickersList.length > 1) this.tickersList.splice(index, 1);
+    },
 
     init() {
       this.$watch("anosProjecao", (val) => {
@@ -54,30 +61,33 @@ document.addEventListener("alpine:init", () => {
 
       this.salvando = true;
       try {
-        const payload = {
-          ticker: this.ticker,
-          preco_atual: this.precoAtual,
-          fclf_inicial: this.fclf,
-          anos_projecao: this.anosProjecao,
-          taxas_crescimento: this.taxasCrescimento,
-          wacc: this.wacc,
-          cresc_perp: this.crescPerp,
-          divida_liquida: this.dividaLiquida,
-          num_acoes: this.numAcoes,
-          margem_seguranca: this.margemSeguranca,
-          preco_justo: this.resultados.precoJusto,
-          preco_teto: this.resultados.precoTeto,
-        };
-
-        const res = await fetch("/valuations", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+        // Save one record per ticker — shared premissas, per-ticker precoAtual
+        const saves = this.tickersList.map((t) => {
+          const payload = {
+            ticker: t.ticker,
+            preco_atual: t.precoAtual,
+            fclf_inicial: this.fclf,
+            anos_projecao: this.anosProjecao,
+            taxas_crescimento: this.taxasCrescimento,
+            wacc: this.wacc,
+            cresc_perp: this.crescPerp,
+            divida_liquida: this.dividaLiquida,
+            num_acoes: this.numAcoes,
+            margem_seguranca: this.margemSeguranca,
+            preco_justo: this.resultados.precoJusto,
+            preco_teto: this.resultados.precoTeto,
+          };
+          return fetch("/valuations", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }).then((res) => {
+            if (!res.ok) throw new Error(`Erro ao salvar ${t.ticker}`);
+          });
         });
 
-        if (!res.ok) throw new Error("Erro ao salvar no banco de dados");
-
-        alert("Valuation salvo com sucesso!");
+        await Promise.all(saves);
+        alert(`${this.tickersList.length} valuation(s) salvo(s) com sucesso!`);
       } catch (e) {
         alert(e.message);
       } finally {
@@ -112,21 +122,23 @@ document.addEventListener("alpine:init", () => {
       }
     },
 
-    // NOVA FUNÇÃO: Carrega os dados da tabela para o formulário
+    // Carrega os dados da tabela para o formulário.
+    // Restores a single-ticker list from a saved record.
     carregarValuationFormulario(item) {
-      this.ticker = item.ticker;
-      this.precoAtual = item.preco_atual;
+      this.tickersList = [
+        { ticker: item.ticker, precoAtual: item.preco_atual },
+      ];
       this.fclf = item.fclf_inicial;
       this.anosProjecao = item.anos_projecao;
-      this.taxasCrescimento = [...item.taxas_crescimento]; // Usa espalhamento para clonar o array
+      this.taxasCrescimento = [...item.taxas_crescimento];
       this.wacc = item.wacc;
       this.crescPerp = item.cresc_perp;
       this.dividaLiquida = item.divida_liquida;
       this.numAcoes = item.num_acoes;
       this.margemSeguranca = item.margem_seguranca;
 
-      this.ocultarResultados = false; // Garante que você verá o resultado
-      this.mudarAba("calculadora"); // Troca a tela
+      this.ocultarResultados = false;
+      this.mudarAba("calculadora");
     },
 
     // NOVO GETTER: Filtra a tabela inteligentemente
@@ -166,9 +178,10 @@ document.addEventListener("alpine:init", () => {
       });
     },
 
-    buscarPrecoNaBrapi() {
-      if (!this.ticker) return;
-      fetch(`/api/quote/${this.ticker}`)
+    buscarPrecoNaBrapi(index) {
+      const t = this.tickersList[index];
+      if (!t || !t.ticker) return;
+      fetch(`/api/quote/${t.ticker}`)
         .then((res) => res.json())
         .then((data) => {
           if (
@@ -176,10 +189,10 @@ document.addEventListener("alpine:init", () => {
             data.results.length > 0 &&
             data.results[0].regularMarketPrice
           ) {
-            this.precoAtual = data.results[0].regularMarketPrice;
+            t.precoAtual = data.results[0].regularMarketPrice;
           }
         })
-        .catch((err) => alert("Erro ao buscar cotação. Verifique o ticker."));
+        .catch(() => alert("Erro ao buscar cotação. Verifique o ticker."));
     },
 
     get resultados() {
@@ -219,44 +232,6 @@ document.addEventListener("alpine:init", () => {
       const mSeguranca = parseFloat(this.margemSeguranca) || 0;
       const precoTeto = precoJusto * (1 - mSeguranca / 100);
 
-      let status = {
-        texto: "AGUARDAR",
-        cor: "text-amber-400",
-        bg: "bg-amber-900/20",
-        border: "border-amber-700/50",
-      };
-      const precoA = parseFloat(this.precoAtual) || 0;
-
-      if (precoJusto === 0 || erro) {
-        status = {
-          texto: "INVIÁVEL",
-          cor: "text-red-400",
-          bg: "bg-red-900/20",
-          border: "border-red-700/50",
-        };
-      } else if (precoA <= precoTeto) {
-        status = {
-          texto: "COMPRAR (Abaixo do Teto)",
-          cor: "text-emerald-400",
-          bg: "bg-emerald-900/20",
-          border: "border-emerald-700/50",
-        };
-      } else if (precoA < precoJusto) {
-        status = {
-          texto: "COMPRAR (Sem Margem)",
-          cor: "text-blue-400",
-          bg: "bg-blue-900/20",
-          border: "border-blue-700/50",
-        };
-      } else {
-        status = {
-          texto: "NÃO COMPRAR (Cara)",
-          cor: "text-red-400",
-          bg: "bg-red-900/20",
-          border: "border-red-700/50",
-        };
-      }
-
       return {
         erro,
         somaPV,
@@ -268,8 +243,69 @@ document.addEventListener("alpine:init", () => {
         precoJusto,
         precoTeto,
         projecoes,
-        status,
       };
+    },
+
+    // Computes per-ticker margin using the shared DCF result.
+    // precoJusto / precoTeto are identical for all tickers in the same company —
+    // only the market price (precoAtual) differs between share classes.
+    get resultadosList() {
+      const base = this.resultados;
+      return this.tickersList.map((t) => {
+        const precoA = parseFloat(t.precoAtual) || 0;
+        const { precoJusto, precoTeto, erro } = base;
+
+        // margemReal: how far precoAtual is from precoTeto (negative = below = good)
+        const margemReal =
+          precoTeto > 0 ? ((precoA - precoTeto) / precoTeto) * 100 : 0;
+
+        let status;
+        if (precoJusto === 0 || erro) {
+          status = {
+            texto: "INVIÁVEL",
+            cor: "text-red-400",
+            bg: "bg-red-900/20",
+            border: "border-red-700/50",
+          };
+        } else if (precoA <= precoTeto) {
+          status = {
+            texto: "COMPRAR (Abaixo do Teto)",
+            cor: "text-emerald-400",
+            bg: "bg-emerald-900/20",
+            border: "border-emerald-700/50",
+          };
+        } else if (precoA < precoJusto) {
+          status = {
+            texto: "COMPRAR (Sem Margem)",
+            cor: "text-blue-400",
+            bg: "bg-blue-900/20",
+            border: "border-blue-700/50",
+          };
+        } else {
+          status = {
+            texto: "NÃO COMPRAR (Cara)",
+            cor: "text-red-400",
+            bg: "bg-red-900/20",
+            border: "border-red-700/50",
+          };
+        }
+
+        return {
+          ticker: t.ticker,
+          precoAtual: precoA,
+          margemReal,
+          status,
+          // pass-through shared fields the results template still needs
+          precoJusto,
+          precoTeto,
+          somaPV: base.somaPV,
+          valorTerminal: base.valorTerminal,
+          vpTerminal: base.vpTerminal,
+          ev: base.ev,
+          projecoes: base.projecoes,
+          erro,
+        };
+      });
     },
 
     formatMoney(val) {

@@ -1,63 +1,81 @@
 <template x-if="!ocultarResultados">
   <div class="flex flex-col gap-6 flex-grow">
-    {# ── Verdict card ───────────────────────────────────────────────────────
+    {# ── Per-ticker verdict cards ────────────────────────────────────────────
     #}
-    <div
-      :class="`p-6 rounded-2xl shadow-lg border ${resultados.status.bg} ${resultados.status.border}`"
-    >
-      <div class="flex flex-col md:flex-row justify-between items-center gap-6">
-        <div>
-          <p class="text-sm font-bold uppercase tracking-wide text-slate-400">
-            Veredito para <span x-text="ticker" class="text-slate-300"></span>
-          </p>
-          <h2
-            :class="`text-2xl sm:text-3xl font-black mt-1 ${resultados.status.cor}`"
-            x-text="resultados.status.texto"
-          ></h2>
-          <p class="text-sm mt-2 text-slate-400">
-            O preço atual é
-            <strong
-              class="text-slate-200"
-              x-text="formatMoney(precoAtual)"
-            ></strong
-            >.
-          </p>
-        </div>
-
-        <div class="flex gap-4 w-full md:w-auto">
-          {# Preço Justo #}
-          <div
-            class="bg-slate-900 p-4 rounded-xl shadow-inner border border-slate-700 flex-1 text-center min-w-[140px]"
-          >
-            <p class="text-xs font-bold text-slate-500 uppercase">
-              Preço Justo
+    <template x-for="(res, i) in resultadosList" :key="i">
+      <div
+        :class="`p-5 rounded-2xl shadow-lg border ${res.status.bg} ${res.status.border}`"
+      >
+        <div
+          class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+        >
+          {# Verdict text #}
+          <div>
+            <p class="text-sm font-bold uppercase tracking-wide text-slate-400">
+              Veredito —
+              <span x-text="res.ticker" class="text-slate-200"></span>
             </p>
-            <p
-              class="text-2xl font-black text-white"
-              x-text="formatMoney(resultados.precoJusto)"
-            ></p>
+            <h2
+              :class="`text-2xl font-black mt-0.5 ${res.status.cor}`"
+              x-text="res.status.texto"
+            ></h2>
           </div>
-          {# Preço Teto #}
-          <div
-            class="bg-slate-900 p-4 rounded-xl shadow-inner border border-slate-700 flex-1 text-center min-w-[140px] relative overflow-hidden"
-          >
-            <div class="absolute top-0 left-0 w-full h-1 bg-blue-500"></div>
-            <p class="text-xs font-bold text-slate-500 uppercase">Preço Teto</p>
-            <p
-              class="text-2xl font-black text-blue-400"
-              x-text="formatMoney(resultados.precoTeto)"
-            ></p>
+
+          {# Price pills #}
+          <div class="flex gap-3 flex-shrink-0">
+            {# Current price #}
+            <div class="text-center">
+              <p class="text-[10px] font-bold text-slate-500 uppercase">
+                Atual
+              </p>
+              <p
+                class="text-lg font-black text-slate-200"
+                x-text="formatMoney(res.precoAtual)"
+              ></p>
+            </div>
+            <div class="w-px bg-slate-600"></div>
+            {# Fair price #}
+            <div class="text-center">
+              <p class="text-[10px] font-bold text-slate-500 uppercase">
+                Preço Justo
+              </p>
+              <p
+                class="text-lg font-black text-white"
+                x-text="formatMoney(res.precoJusto)"
+              ></p>
+            </div>
+            <div class="w-px bg-slate-600"></div>
+            {# Ceiling price #}
+            <div class="text-center">
+              <p class="text-[10px] font-bold text-slate-500 uppercase">
+                Preço Teto
+              </p>
+              <p
+                class="text-lg font-black text-blue-400"
+                x-text="formatMoney(res.precoTeto)"
+              ></p>
+            </div>
+            <div class="w-px bg-slate-600"></div>
+            {# Real margin vs ceiling #}
+            <div class="text-center min-w-[60px]">
+              <p class="text-[10px] font-bold text-slate-500 uppercase">
+                Margem
+              </p>
+              <p
+                class="text-lg font-black"
+                :class="res.margemReal <= 0 ? 'text-emerald-400' : 'text-red-400'"
+                x-text="(res.margemReal > 0 ? '+' : '') + res.margemReal.toFixed(1) + '%'"
+              ></p>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </template>
 
-    {# ── 9-Steps summary ────────────────────────────────────────────────────
+    {# ── 9-Steps summary (shared premissas — same for all tickers) ───────────
     #}
     <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700">
-      <h3 class="text-lg font-bold text-white mb-6 flex items-center gap-2">
-        O Cálculo dos 9 Passos
-      </h3>
+      <h3 class="text-lg font-bold text-white mb-6">O Cálculo dos 9 Passos</h3>
 
       <div class="space-y-4">
         {# Passos 1–2 and 3–5 #}
@@ -133,7 +151,7 @@
           ></p>
         </div>
 
-        {# Passo 8: Equity Value / Preço Justo #}
+        {# Passo 8: Equity Value / Preço Justo — shared result #}
         <div
           class="bg-slate-900 p-4 rounded-lg border border-slate-700 flex justify-between items-center"
         >
@@ -150,7 +168,7 @@
           </p>
         </div>
 
-        {# Passo 9: Preço Teto #}
+        {# Passo 9: Preço Teto — shared result #}
         <div
           class="bg-emerald-900/30 p-4 rounded-lg border border-emerald-500/30 flex justify-between items-center"
         >
@@ -172,7 +190,7 @@
       </div>
     </div>
 
-    {# ── Projection detail table ─────────────────────────────────────────────
+    {# ── Projection detail table (shared cash flows) ─────────────────────────
     #}
     <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700">
       <h3
