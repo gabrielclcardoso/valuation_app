@@ -1,0 +1,467 @@
+<div x-show="abaAtual === 'calculadora'" class="space-y-6">
+  <div class="flex justify-center gap-4">
+    <button
+      @click="ocultarResultados = !ocultarResultados"
+      :class="ocultarResultados ? 'bg-amber-600 text-white border-amber-500' : 'bg-slate-700 text-slate-200 border-slate-600'"
+      class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all border shadow-md hover:bg-opacity-80"
+    >
+      <span
+        x-text="ocultarResultados ? 'Modo Às Cegas: ATIVADO' : 'Ativar Modo de Estimativa às Cegas'"
+      ></span>
+    </button>
+
+    <button
+      @click="salvarValuation()"
+      :disabled="salvando"
+      class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-sm font-bold transition-all border border-emerald-500 shadow-md flex items-center gap-2"
+    >
+      <span
+        x-show="salvando"
+        class="animate-spin inline-block w-4 h-4 border-2 border-current border-t-transparent text-white rounded-full"
+      ></span>
+      <span x-text="salvando ? 'Salvando...' : '💾 Salvar Valuation'"></span>
+    </button>
+  </div>
+
+  <template x-if="resultados.erro">
+    <div
+      class="bg-red-900/50 border-l-4 border-red-500 text-red-300 p-4 rounded shadow-sm"
+    >
+      <strong>Erro Matemático:</strong>
+      <span x-text="resultados.erro"></span>
+    </div>
+  </template>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div class="lg:col-span-4 space-y-6">
+      <div
+        class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700"
+      >
+        <h2
+          class="text-lg font-bold text-white mb-4 border-b border-slate-700 pb-2"
+        >
+          Dados e Premissas
+        </h2>
+        <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1"
+                >Ticker</label
+              >
+              <input
+                type="text"
+                x-model="ticker"
+                @input="ticker = ticker.toUpperCase()"
+                class="w-full p-2 bg-slate-900 border border-slate-600 rounded focus:ring-2 focus:ring-blue-500 font-bold uppercase text-white outline-none"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1"
+                >Preço Atual (R$)</label
+              >
+              <div class="flex">
+                <input
+                  type="number"
+                  step="0.01"
+                  x-model.number="precoAtual"
+                  class="w-full p-2 bg-slate-900 border border-slate-600 border-r-0 rounded-l focus:ring-2 focus:ring-blue-500 font-mono text-white outline-none"
+                />
+                <button
+                  @click="buscarPrecoNaBrapi"
+                  class="bg-blue-600 hover:bg-blue-500 border border-blue-600 text-white px-2 rounded-r text-xs font-bold transition-colors"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    ></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-2 border-t border-slate-700">
+            <label class="block text-xs font-semibold text-slate-400 mb-1"
+              >Passo 1: FCLF Atual (Mi)</label
+            >
+            <input
+              type="number"
+              x-model.number="fclf"
+              class="w-full p-2 bg-slate-900 border border-slate-600 rounded focus:ring-2 focus:ring-blue-500 font-mono text-white outline-none"
+            />
+          </div>
+
+          <div class="pt-2 border-t border-slate-700">
+            <label class="block text-xs font-semibold text-slate-400 mb-1"
+              >Passo 2: Anos de Projeção</label
+            >
+            <input
+              type="number"
+              x-model.number="anosProjecao"
+              min="1"
+              max="20"
+              class="w-full p-2 bg-slate-900 border border-slate-600 rounded focus:ring-2 focus:ring-blue-500 font-bold text-white outline-none"
+            />
+
+            <label
+              class="block text-[11px] font-semibold text-slate-500 mt-4 mb-2"
+              >Crescimento por Ano (%)</label
+            >
+            <div class="grid grid-cols-3 gap-2">
+              <template x-for="(taxa, index) in taxasCrescimento" :key="index">
+                <div class="bg-slate-900 p-1.5 rounded border border-slate-700">
+                  <label
+                    class="text-[10px] text-slate-500 block text-center"
+                    x-text="'Ano ' + (index + 1)"
+                  ></label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    x-model.number="taxasCrescimento[index]"
+                    class="w-full p-1 text-sm bg-slate-800 border border-slate-600 rounded focus:ring-1 focus:ring-blue-500 text-center font-semibold text-white outline-none"
+                  />
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <div
+            class="grid grid-cols-2 gap-3 pt-4 border-t border-slate-700 mt-3"
+          >
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1"
+                >Passo 4: WACC (%)</label
+              >
+              <input
+                type="number"
+                step="0.1"
+                x-model.number="wacc"
+                class="w-full p-2 bg-slate-900 border border-slate-600 rounded focus:ring-2 focus:ring-blue-500 text-white outline-none"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1"
+                >Passo 6: Perpetuidade (%)</label
+              >
+              <input
+                type="number"
+                step="0.1"
+                x-model.number="crescPerp"
+                class="w-full p-2 bg-slate-900 border border-slate-600 rounded focus:ring-2 focus:ring-blue-500 text-white outline-none"
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 pt-2 border-t border-slate-700">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1"
+                >Passo 8: Dívida Líq. (Mi)</label
+              >
+              <input
+                type="number"
+                x-model.number="dividaLiquida"
+                class="w-full p-2 bg-slate-900 border border-slate-600 rounded focus:ring-2 focus:ring-blue-500 font-mono text-white outline-none"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1"
+                >Passo 8: Total Ações (Mi)</label
+              >
+              <input
+                type="number"
+                x-model.number="numAcoes"
+                class="w-full p-2 bg-slate-900 border border-slate-600 rounded focus:ring-2 focus:ring-blue-500 font-mono text-white outline-none"
+              />
+            </div>
+          </div>
+
+          <div class="pt-2 border-t border-slate-700">
+            <label class="block text-xs font-semibold text-slate-400 mb-1"
+              >Passo 9: Margem Desejada (%)</label
+            >
+            <input
+              type="number"
+              x-model.number="margemSeguranca"
+              class="w-full p-2 bg-slate-900 border border-slate-600 rounded focus:ring-2 focus:ring-blue-500 text-white outline-none"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="lg:col-span-8 flex flex-col gap-6 relative min-h-[400px]">
+      <template x-if="ocultarResultados">
+        <div
+          class="bg-slate-800 text-slate-300 rounded-2xl p-8 flex flex-col items-center justify-center text-center flex-grow shadow-lg border border-slate-700 border-dashed"
+        >
+          <div class="bg-slate-900 p-4 rounded-full mb-4">
+            <svg
+              class="w-12 h-12 text-amber-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+              ></path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-bold tracking-tight text-white">
+            Modo de Estimativa às Cegas Ativo
+          </h3>
+          <button
+            @click="ocultarResultados = false"
+            class="mt-6 bg-amber-600 hover:bg-amber-500 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors shadow"
+          >
+            Revelar Avaliação
+          </button>
+        </div>
+      </template>
+
+      <template x-if="!ocultarResultados">
+        <div class="flex flex-col gap-6 flex-grow">
+          <div
+            :class="`p-6 rounded-2xl shadow-lg border ${resultados.status.bg} ${resultados.status.border}`"
+          >
+            <div
+              class="flex flex-col md:flex-row justify-between items-center gap-6"
+            >
+              <div>
+                <p
+                  class="text-sm font-bold uppercase tracking-wide text-slate-400"
+                >
+                  Veredito para
+                  <span x-text="ticker" class="text-slate-300"></span>
+                </p>
+                <h2
+                  :class="`text-2xl sm:text-3xl font-black mt-1 ${resultados.status.cor}`"
+                  x-text="resultados.status.texto"
+                ></h2>
+                <p class="text-sm mt-2 text-slate-400">
+                  O preço atual é
+                  <strong
+                    class="text-slate-200"
+                    x-text="formatMoney(precoAtual)"
+                  ></strong
+                  >.
+                </p>
+              </div>
+              <div class="flex gap-4 w-full md:w-auto">
+                <div
+                  class="bg-slate-900 p-4 rounded-xl shadow-inner border border-slate-700 flex-1 text-center min-w-[140px]"
+                >
+                  <p class="text-xs font-bold text-slate-500 uppercase">
+                    Preço Justo
+                  </p>
+                  <p
+                    class="text-2xl font-black text-white"
+                    x-text="formatMoney(resultados.precoJusto)"
+                  ></p>
+                </div>
+                <div
+                  class="bg-slate-900 p-4 rounded-xl shadow-inner border border-slate-700 flex-1 text-center min-w-[140px] relative overflow-hidden"
+                >
+                  <div
+                    class="absolute top-0 left-0 w-full h-1 bg-blue-500"
+                  ></div>
+                  <p class="text-xs font-bold text-slate-500 uppercase">
+                    Preço Teto
+                  </p>
+                  <p
+                    class="text-2xl font-black text-blue-400"
+                    x-text="formatMoney(resultados.precoTeto)"
+                  ></p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700"
+          >
+            <h3
+              class="text-lg font-bold text-white mb-6 flex items-center gap-2"
+            >
+              O Cálculo dos 9 Passos
+            </h3>
+            <div class="space-y-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div
+                  class="bg-slate-900 p-4 rounded-lg border border-slate-700"
+                >
+                  <p class="text-xs font-bold text-slate-500">Passos 1 e 2</p>
+                  <p class="text-sm font-medium text-slate-300 mt-1">
+                    FCLF Inicial:
+                    <span
+                      class="font-mono text-white"
+                      x-text="'R$ ' + formatNum(fclf)"
+                    ></span>
+                  </p>
+                  <p class="text-sm font-medium text-slate-300">
+                    Período:
+                    <span
+                      class="font-mono text-white"
+                      x-text="anosProjecao + ' Anos'"
+                    ></span>
+                  </p>
+                </div>
+                <div
+                  class="bg-slate-900 p-4 rounded-lg border border-slate-700"
+                >
+                  <p class="text-xs font-bold text-slate-500">
+                    Passos 3, 4 e 5
+                  </p>
+                  <p class="text-sm font-medium text-slate-300 mt-1">
+                    WACC:
+                    <span
+                      class="font-mono text-white"
+                      x-text="wacc + '%'"
+                    ></span>
+                  </p>
+                  <p class="text-sm font-medium text-slate-300">
+                    Σ Valor Presente:
+                    <span
+                      class="font-mono font-bold text-blue-400"
+                      x-text="'R$ ' + formatNum(resultados.somaPV)"
+                    ></span>
+                  </p>
+                </div>
+              </div>
+              <div
+                class="bg-indigo-900/30 p-4 rounded-lg border border-indigo-500/30"
+              >
+                <p class="text-xs font-bold text-indigo-400">
+                  Passo 6: Valor Terminal (A partir do Ano
+                  <span x-text="anosProjecao + 1"></span>)
+                </p>
+                <div
+                  class="flex flex-col sm:flex-row justify-between mt-1 text-sm text-indigo-200"
+                >
+                  <p>
+                    Valor Terminal Bruto: R$
+                    <span x-text="formatNum(resultados.valorTerminal)"></span>
+                  </p>
+                  <p class="font-bold text-indigo-300">
+                    VP Terminal:
+                    <span
+                      class="font-mono text-indigo-400"
+                      x-text="'R$ ' + formatNum(resultados.vpTerminal)"
+                    ></span>
+                  </p>
+                </div>
+              </div>
+              <div
+                class="bg-slate-900 p-4 rounded-lg border border-slate-700 flex justify-between items-center"
+              >
+                <div>
+                  <p class="text-xs font-bold text-slate-500">
+                    Passo 7: Enterprise Value
+                  </p>
+                </div>
+                <p
+                  class="text-lg font-black font-mono text-white"
+                  x-text="'R$ ' + formatNum(resultados.ev)"
+                ></p>
+              </div>
+              <div
+                class="bg-slate-900 p-4 rounded-lg border border-slate-700 flex justify-between items-center"
+              >
+                <div>
+                  <p class="text-xs font-bold text-slate-500">
+                    Passo 8: Equity Value e Preço Justo
+                  </p>
+                  <p class="text-xs text-slate-400">
+                    EV - Dívida Dividido pelas Ações
+                  </p>
+                </div>
+                <div class="text-right">
+                  <p class="text-lg font-black font-mono text-white">
+                    <span x-text="formatMoney(resultados.precoJusto)"></span
+                    >/ação
+                  </p>
+                </div>
+              </div>
+              <div
+                class="bg-emerald-900/30 p-4 rounded-lg border border-emerald-500/30 flex justify-between items-center"
+              >
+                <div>
+                  <p
+                    class="text-xs font-bold text-emerald-500 uppercase tracking-wide"
+                  >
+                    Passo 9: Preço Teto
+                  </p>
+                  <p class="text-xs text-emerald-400/80">
+                    Com <span x-text="margemSeguranca"></span>% de Margem
+                  </p>
+                </div>
+                <div class="text-right">
+                  <p
+                    class="text-xl font-black font-mono text-emerald-400"
+                    x-text="formatMoney(resultados.precoTeto)"
+                  ></p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700"
+          >
+            <h3
+              class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-700 pb-2"
+            >
+              Detalhes da Projeção
+            </h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm text-left text-slate-300">
+                <thead class="bg-slate-900 text-slate-500 text-xs uppercase">
+                  <tr>
+                    <th class="px-4 py-3 rounded-tl-lg font-bold">Ano</th>
+                    <th class="px-4 py-3 font-bold">Cresc. (%)</th>
+                    <th class="px-4 py-3 font-bold">FCLF Projetado</th>
+                    <th class="px-4 py-3 text-right rounded-tr-lg font-bold">
+                      Valor Presente
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-700/50">
+                  <template x-for="p in resultados.projecoes" :key="p.ano">
+                    <tr class="hover:bg-slate-700/50 transition-colors">
+                      <td
+                        class="px-4 py-3 font-medium text-slate-200"
+                        x-text="'Ano ' + p.ano"
+                      ></td>
+                      <td
+                        class="px-4 py-3 text-slate-400"
+                        x-text="p.g + '%'"
+                      ></td>
+                      <td
+                        class="px-4 py-3 font-mono text-slate-300"
+                        x-text="'R$ ' + formatNum(p.fcf)"
+                      ></td>
+                      <td
+                        class="px-4 py-3 font-mono text-right font-semibold text-blue-400"
+                        x-text="'R$ ' + formatNum(p.vp)"
+                      ></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+</div>

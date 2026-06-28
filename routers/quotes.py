@@ -1,20 +1,25 @@
-from fastapi import APIRouter, Request
-from fastapi.responses import FileResponse
-from jose import JWTError, jwt
+from fastapi import APIRouter, Depends, HTTPException
+import httpx
+import os
 
-from security import SECRET_KEY, ALGORITHM
+from security import get_current_user_id
 
-router = APIRouter(tags=["Frontend"])
+router = APIRouter(tags=["Cotações"])
+BRAPI_TOKEN = os.getenv("BRAPI_TOKEN")
 
 
-@router.get("/")
-def serve_frontend(request: Request):
-    token = request.cookies.get("access_token")
-    if not token:
-        return FileResponse("frontend/login.html")
-    try:
-        scheme, _, param = token.partition(" ")
-        jwt.decode(param, SECRET_KEY, algorithms=[ALGORITHM])
-        return FileResponse("frontend/calculator.html")
-    except JWTError:
-        return FileResponse("frontend/login.html")
+@router.get("/api/quote/{ticker}")
+async def get_quote(ticker: str, user_id: int = Depends(get_current_user_id)):
+    if not BRAPI_TOKEN:
+        raise HTTPException(status_code=500, detail="Token da Brapi não configurado.")
+
+    async with httpx.AsyncClient() as client:
+        url = f"https://brapi.dev/api/quote/{ticker}?token={BRAPI_TOKEN}"
+        resposta = await client.get(url)
+
+        if resposta.status_code != 200:
+            raise HTTPException(
+                status_code=400, detail="Erro ao buscar cotação na Brapi"
+            )
+
+        return resposta.json()
