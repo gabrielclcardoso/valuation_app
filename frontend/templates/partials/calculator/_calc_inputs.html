@@ -50,6 +50,7 @@
               <input
                 type="number"
                 step="0.01"
+				inputmode="decimal"
                 x-model.number="t.precoAtual"
                 placeholder="Preço"
                 class="flex-1 min-w-0 p-2 bg-slate-800 border border-slate-600 border-r-0 focus:ring-2 focus:ring-blue-500 font-mono text-white outline-none text-sm"
@@ -106,6 +107,7 @@
     >
     <input
       type="number"
+	  inputmode="decimal"
       x-model.number="fclf"
       class="w-full p-2 bg-slate-900 border border-slate-600 rounded focus:ring-2 focus:ring-blue-500 font-mono text-white outline-none"
     />
@@ -118,6 +120,7 @@
     >
     <input
       type="number"
+	  inputmode="numeric"
       x-model.number="anosProjecao"
       min="1"
       max="20"
@@ -136,6 +139,7 @@
           ></label>
           <input
             type="number"
+			inputmode="decimal"
             step="0.1"
             x-model.number="taxasCrescimento[index]"
             class="w-full p-1 text-sm bg-slate-800 border border-slate-600 rounded focus:ring-1 focus:ring-blue-500 text-center font-semibold text-white outline-none"
@@ -153,8 +157,10 @@
       >
       <input
         type="number"
+		inputmode="decimal"
         step="0.1"
         x-model.number="wacc"
+		inputmode="decimal"
         class="w-full p-2 bg-slate-900 border border-slate-600 rounded focus:ring-2 focus:ring-blue-500 text-white outline-none"
       />
     </div>
@@ -164,6 +170,7 @@
       >
       <input
         type="number"
+		inputmode="decimal"
         step="0.1"
         x-model.number="crescPerp"
         class="w-full p-2 bg-slate-900 border border-slate-600 rounded focus:ring-2 focus:ring-blue-500 text-white outline-none"
@@ -179,6 +186,7 @@
       >
       <input
         type="number"
+		inputmode="decimal"
         x-model.number="dividaLiquida"
         class="w-full p-2 bg-slate-900 border border-slate-600 rounded focus:ring-2 focus:ring-blue-500 font-mono text-white outline-none"
       />
@@ -189,6 +197,7 @@
       >
       <input
         type="number"
+		inputmode="decimal"
         x-model.number="numAcoes"
         class="w-full p-2 bg-slate-900 border border-slate-600 rounded focus:ring-2 focus:ring-blue-500 font-mono text-white outline-none"
       />
@@ -202,6 +211,7 @@
     >
     <input
       type="number"
+	  inputmode="decimal"
       x-model.number="margemSeguranca"
       class="w-full p-2 bg-slate-900 border border-slate-600 rounded focus:ring-2 focus:ring-blue-500 text-white outline-none"
     />

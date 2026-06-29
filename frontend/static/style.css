@@ -1,0 +1,93 @@
+/* ==========================================================================
+   GLOBAL VARIABLES & THEMING
+   ========================================================================== */
+:root {
+  --color-primary: #2563eb; /* blue-600 */
+  --color-primary-hover: #3b82f6; /* blue-500 */
+  --color-bg-main: #0f172a; /* slate-900 */
+  --color-bg-card: #1e293b; /* slate-800 */
+  --color-border: #334155; /* slate-700 */
+  --color-success: #059669; /* emerald-600 */
+  --color-warning: #d97706; /* amber-600 */
+}
+
+/* ==========================================================================
+   ALPINE.JS & LAYOUT FIXES
+   ========================================================================== */
+[x-cloak] {
+  display: none !important;
+}
+
+/* Garante animação suave ao alternar o "Modo às Cegas" */
+.flex-grow {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ==========================================================================
+   GLOBAL RESETS & SMOOTHING
+   ========================================================================== */
+html {
+  scroll-behavior: smooth;
+}
+
+a,
+button,
+input,
+select,
+textarea {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Força números monoespaçados a manterem larguras fixas (Tabelas e Passos) */
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   CUSTOM SCROLLBARS (Crucial para Mobile)
+   ========================================================================== */
+.overflow-x-auto {
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-main);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* ==========================================================================
+   INPUT CORRECTIONS (Melhorias para _calc_inputs.html)
+   ========================================================================== */
+
+/* Remove as setas (spinners) nativas de inputs numéricos para um visual cleaner */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield; /* Firefox */
+}
+
+/* Corrige cores de preenchimento automático (Autofill) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #ffffff;
+  -webkit-box-shadow: 0 0 0px 1000px #0f172a inset;
+  transition: background-color 5000s ease-in-out 0s;
+}

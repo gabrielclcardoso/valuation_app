@@ -23,14 +23,14 @@
   <div class="flex justify-center gap-2 mt-6">
     <button
       @click="mudarAba('calculadora')"
-      :class="abaAtual === 'calculadora' ? 'bg-blue-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-white'"
+      :class="abaAtual === 'calculadora' ? 'bg-[var(--color-primary)] text-white' : 'bg-slate-900 text-slate-400'"
       class="px-5 py-2.5 rounded-xl text-sm font-bold transition-all border border-slate-700 shadow-md"
     >
       🔢 Calculadora
     </button>
     <button
       @click="mudarAba('historico')"
-      :class="abaAtual === 'historico' ? 'bg-blue-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-white'"
+      :class="abaAtual === 'calculadora' ? 'bg-[var(--color-primary)] text-white' : 'bg-slate-900 text-slate-400'"
       class="px-5 py-2.5 rounded-xl text-sm font-bold transition-all border border-slate-700 shadow-md"
     >
       📂 Meus Valuations
