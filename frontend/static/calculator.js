@@ -19,6 +19,7 @@ document.addEventListener("alpine:init", () => {
     numAcoes: 4500,
     margemSeguranca: 20,
     ocultarResultados: false,
+    precosTempoReal: {},
 
     adicionarTicker() {
       this.tickersList.push({ ticker: "", precoAtual: 0 });
@@ -101,9 +102,40 @@ document.addEventListener("alpine:init", () => {
         if (!res.ok) throw new Error("Erro ao buscar histórico");
         this.historico = await res.json();
         this.historico.reverse(); // Os mais novos ficam no topo
+        await this.atualizarPrecosHistorico();
       } catch (e) {
         console.error(e);
       }
+    },
+
+    // Função chamada quando o usuário clica na aba de histórico
+    async atualizarPrecosHistorico() {
+      if (!this.historico || this.historico.length === 0) return;
+
+      // Extrai apenas tickers únicos da lista para não repetir requisições idênticas
+      const tickersUnicos = [
+        ...new Set(this.historico.map((item) => item.ticker)),
+      ];
+
+      // Dispara as consultas em paralelo para máxima velocidade no Oracle VPS
+      await Promise.all(
+        tickersUnicos.map(async (ticker) => {
+          try {
+            const resposta = await fetch(`/api/quote/${ticker}`);
+            if (resposta.ok) {
+              const dados = await resposta.json();
+
+              // Mapeia o retorno baseado no padrão da API Brapi (results[0].regularMarketPrice)
+              if (dados.results && dados.results[0]) {
+                this.precosTempoReal[ticker] =
+                  dados.results[0].regularMarketPrice;
+              }
+            }
+          } catch (erro) {
+            console.error(`Erro ao atualizar preço de ${ticker}:`, erro);
+          }
+        }),
+      );
     },
 
     async excluirValuation(id) {
