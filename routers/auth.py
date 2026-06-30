@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from jose import jwt
@@ -8,7 +8,6 @@ from database import get_db
 from models import UserDB
 from schemas import LoginRequest
 from security import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
-from schemas import UserResponse, UserRegister
 
 router = APIRouter(tags=["Autenticação"])
 
@@ -38,28 +37,28 @@ def login(login_data: LoginRequest, response: Response, db: Session = Depends(ge
     return {"message": "Login realizado com sucesso"}
 
 
-@router.post(
-    "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
-)
-def register(user_data: UserRegister, db: Session = Depends(get_db)):
-    db_user = get_user_by_username(db, user_data.username)
-    if db_user:
-        raise HTTPException(
-            status_code=400, detail="Este nome de usuário já está em uso."
-        )
-
-    salt = bcrypt.gensalt()
-    hashed_password = bcrypt.hashpw(user_data.senha.encode("utf-8"), salt).decode(
-        "utf-8"
-    )
-
-    novo_usuario = UserDB(
-        nome=user_data.nome, username=user_data.username, senha_hash=hashed_password
-    )
-    db.add(novo_usuario)
-    db.commit()
-    db.refresh(novo_usuario)
-    return novo_usuario
+# @router.post(
+#     "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+# )
+# def register(user_data: UserRegister, db: Session = Depends(get_db)):
+#     db_user = get_user_by_username(db, user_data.username)
+#     if db_user:
+#         raise HTTPException(
+#             status_code=400, detail="Este nome de usuário já está em uso."
+#         )
+#
+#     salt = bcrypt.gensalt()
+#     hashed_password = bcrypt.hashpw(user_data.senha.encode("utf-8"), salt).decode(
+#         "utf-8"
+#     )
+#
+#     novo_usuario = UserDB(
+#         nome=user_data.nome, username=user_data.username, senha_hash=hashed_password
+#     )
+#     db.add(novo_usuario)
+#     db.commit()
+#     db.refresh(novo_usuario)
+#     return novo_usuario
 
 
 @router.post("/logout")
