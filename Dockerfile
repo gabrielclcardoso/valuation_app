@@ -1,24 +1,24 @@
-# Usa uma versão oficial e enxuta do Python
+# Imagem enxuta oficial do Python
 FROM python:3.11-slim
 
-# Define a pasta de trabalho dentro do contêiner
 WORKDIR /app
 
-# Instala o uv no contêiner
-RUN pip install --no-cache-dir uv
+# Otimizações de ambiente Python
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# Copia os arquivos de configuração do uv PRIMEIRO (para aproveitar o cache do Docker)
-# O asterisco permite copiar o uv.lock caso ele exista, sem dar erro se não existir
+# Copia o binário estático do uv diretamente (evita overhead de usar pip para instalar o uv)
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+
+# Copia arquivos de dependência primeiro para aproveitar cache do Docker
 COPY pyproject.toml uv.lock* ./
 
-# Usa o uv para instalar as dependências do pyproject.toml diretamente no sistema do contêiner
+# Instala as dependências diretamente no Python do sistema sem gerar cache desnecessário
 RUN uv pip install --system -r pyproject.toml
 
-# Copia o restante do código (main.py, pasta frontend/, etc.)
+# Copia o restante da aplicação
 COPY . .
 
-# Expõe a porta 8000 internamente
 EXPOSE 8000
 
-# Comando para iniciar o servidor
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

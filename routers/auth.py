@@ -33,6 +33,7 @@ def login(login_data: LoginRequest, response: Response, db: Session = Depends(ge
         value=f"Bearer {encoded_jwt}",
         httponly=True,
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        samesite="lax",
     )
     return {"message": "Login realizado com sucesso"}
 

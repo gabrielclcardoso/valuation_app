@@ -1,0 +1,20 @@
+{
+    # Global options
+}
+
+valuation.supermeia.com {
+    # Ativa compressão zstd e gzip
+    encode zstd gzip
+
+    # Serve arquivos estáticos direto do disco sem passar pelo Python
+    handle_path /static/* {
+        root * /srv/static
+        file_server
+        header Cache-Control "public, max-age=604800, must-revalidate"
+    }
+
+    # Faz o proxy de todas as outras requisições para a API FastAPI
+    handle {
+        reverse_proxy api:8000
+    }
+}
