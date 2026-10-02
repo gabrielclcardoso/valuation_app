@@ -22,6 +22,7 @@ document.addEventListener("alpine:init", () => {
     precosTempoReal: {},
     modalImportarAberto: false,
     jsonParaImportar: "",
+    detalhesValuation: null,
 
     importarJSON() {
       try {
@@ -59,6 +60,7 @@ document.addEventListener("alpine:init", () => {
         const margem = data.margemSeguranca !== undefined ? data.margemSeguranca : data.margem_seguranca;
         if (margem !== undefined) this.margemSeguranca = parseFloat(margem);
 
+        this.detalhesValuation = data.detalhes || null;
         this.modalImportarAberto = false;
         this.jsonParaImportar = "";
         if (data.ticker) {

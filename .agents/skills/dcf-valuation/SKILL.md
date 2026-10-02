@@ -1,180 +1,180 @@
 ---
 name: dcf-valuation
-description: Analyzes Brazilian public companies (B3) using Discounted Free Cash Flow to Firm (FCFF / FCLF), following a strict 4-phase blind methodology, and outputs a ready-to-use JSON file for the valuation app.
+description: Analyzes Brazilian public companies (B3) using specialized fundamentalist valuation models (DCF por FCFF para Concessões/Infra, Gordon & DDM para Bancos/Seguradoras, SOTP Intrínseco para Holdings, e DDM Regulatório para Operadoras de Saúde), following a strict 4-phase blind methodology, and outputs a ready-to-use JSON file for the valuation app.
 ---
 
-# Valuation por Fluxo de Caixa Descontado (DCF / FCD) para Ações Brasileiras (B3)
+# Valuation Fundamentalista para Ações Brasileiras (B3)
 
-Esta skill guia o agente Antigravity na execução completa do processo de Valuation por FCD (9 Passos) para empresas listadas na B3, garantindo rigor contábil, cálculos exatos via Python, proteção contra viés de ancoragem e exportação padronizada em JSON.
-
----
-
-## 🛑 Fase 0: Triagem de Elegibilidade do Setor
-
-Antes de iniciar qualquer análise, verifique se o modelo FCD (FCFF/WACC) é aplicável:
-
-* **NÃO APLICÁVEL (Rejeitar ou alertar o usuário):**
-  * **Setor Financeiro:** Bancos (ITUB, BBDC, BBAS, SANB), Seguradoras/Planos de Saúde (BBSE, CXSE, Bradesco Saúde, PSSA), Corretoras/B3 (B3SA3). *Motivo: A dívida/depósitos/reservas técnicas é a matéria-prima do negócio. Use DDM (Gordon) ou P/VP.*
-  * **Eventos Binários:** Biotecnologia pré-clínica, mineradoras/petroleiras juniores em sondagem. *Use Opções Reais.*
-  * **Empresas Pré-Lucro / Startups de Queima Acelerada:** SaaS ou e-commerce com FCLF negativo crônico. *Use Múltiplos EV/Sales.*
-  * **Holdings Puras:** Itaúsa (ITSA4). *Use Soma das Partes (SOTP).*
-  * **Recuperação Judicial Severa:** *Use Liquidação / Net Asset Value.*
-
-* **IDEAL PARA FCD:**
-  * Utilidades Públicas (Alupar, Sanepar, CPFL, Engie, Taesa, Sabesp).
-  * Telecomunicações (TIM, Telefônica Brasil/Vivo).
-  * Indústria e Bens de Capital (WEG, Tupy, Iochpe-Maxion).
-  * Logística e Infraestrutura (CCR, Ecorodovias, Santos Brasil, Rumo).
-  * Saúde Operacional / Hospitais / Diagnósticos (Rede D'Or, Fleury, Mater Dei).
-  * Varejo maduro e Consumo (M. Dias Branco, Ambev, Lojas Renner).
+Esta skill guia o agente Antigravity na execução completa do processo de Valuation para empresas listadas na B3, com foco especial em **empresas de infraestrutura, dividendos e previdenciárias**, garantindo rigor contábil, cálculos exatos via Python, proteção contra viés de ancoragem e exportação padronizada em JSON para a Calculadora Web.
 
 ---
 
-## 📋 As 4 Fases de Execução
+## 🧭 Fase 0: Roteamento Inteligente de Metodologia
+
+Antes de iniciar qualquer coleta, identifique a natureza contábil e societária da empresa para acionar o motor de valuation correto:
+
+```mermaid
+flowchart TD
+    Inicio["Identificação do Ativo (Ticker / Setor)"] --> Roteador{"Tipo de Empresa"}
+    
+    Roteador -->|"Concessões, Saneamento, Energia, Telecom, Indústria, Hospitais"| FluxoA["Fluxo A: DCF por FCFF (WACC)<br/>Script: calc_dcf.py"]
+    Roteador -->|"Bancos e Seguradoras / Corretoras (ITUB, BBAS, BBDC, BBSE, CXSE)"| FluxoB["Fluxo B: Gordon & DDM (Ke)<br/>Script: calc_financials.py"]
+    Roteador -->|"Holdings Puras e Mistas (ITSA4, BRAP4)"| FluxoC["Fluxo C: SOTP Intrínseco<br/>Script: calc_holding.py"]
+    Roteador -->|"Operadoras de Saúde ANS (BradSaúde/SAUD3, Hapvida)"| FluxoD["Fluxo D: Saúde Suplementar ANS<br/>Script: calc_saude.py"]
+```
+
+> [!TIP]
+> Você pode executar a triagem automática via terminal executando:
+> `python valuation_cli.py route --ticker <TICKER>`
+
+* **Fluxo A — DCF por FCFF / WACC (`calc_dcf.py`):**
+  * Saneamento (SAPR4, SBSP3, CSMG3), Energia Elétrica (ALUP11, CPFE3, EGIE3, TAEE11), Telecom (TIMS3, VIVT3), Rodovias/Logística (CCRO3, ECOR3, STBP3), Indústria (WEGE3, TUPY3), Hospitais e Redes de Diagnóstico (RDOR3, FLRY3).
+* **Fluxo B — Gordon Growth & DDM (`calc_financials.py`):**
+  * Bancos (ITUB4, BBAS3, BBDC4, SANB11) e Seguradoras/Bancassurance (BBSE3, CXSE3).
+  * *Fundamento:* A dívida/depósitos faz parte da operação e o caixa livre que chega ao acionista é limitado pelo Índice de Basileia ou Margem de Solvência da Susep. Usa-se $K_e$ (Custo do Capital Próprio) em vez de WACC.
+* **Fluxo C — SOTP a Valor Intrínseco (`calc_holding.py`):**
+  * Holdings (ITSA4, BRAP4, SIMH3).
+  * *Fundamento Anti-Bolha:* Para evitar herdar eventuais cotações de mercado infladas das controladas (ex: se Itaú estiver caro na bolsa), o modelo calcula tanto o **SOTP a Valor de Mercado** quanto o **SOTP a Valor Intrínseco** (utilizando o Preço Justo fundamentalista calculado para a investida).
+* **Fluxo D — DDM Regulatório ANS (`calc_saude.py`):**
+  * Operadoras de Planos de Saúde com provisões técnicas (BradSaúde/SAUD3, HAPV3, ODPV3).
+  * *Fundamento:* Calibra a Sinistralidade Médica (MLR), o rendimento do *float* das provisões técnicas e a retenção de lucros exigida pela Margem de Solvência da ANS.
+
+---
+
+## 📋 As 4 Fases de Execução (Rigor Metodológico)
 
 ### Fase 1: Coleta Bruta (Isolando Fatos)
 
 > [!WARNING]
 > **REGRA DE ATUALIDADE TEMPORAL (ANTI-DESATUALIZAÇÃO):**
-> * **NUNCA chumbe anos passados nas buscas** (ex: NUNCA pesquise termos fixos como `"DFP 2024"` ou `"4T24"`). Modelos de IA possuem forte viés de ancoragem em anos anteriores.
-> * **Verifique o ano civil corrente:** Sempre identifique o ano atual antes de pesquisar.
+> * **NUNCA chumbe anos passados nas buscas** (ex: NUNCA pesquise termos fixos como `"DFP 2024"` ou `"4T24"`). Identifique o ano civil atual antes de pesquisar.
 > * **Acesse primeiro a Central de Resultados oficial:**
 >   Faça buscas como `site:ri.<empresa>.com.br "Central de Resultados"` ou `site:cvm.gov.br "<empresa>" "DFP"`.
-> * **Identifique a última DFP fechada e o último ITR trimestral:**
->   Utilize a DFP do último ano calendário completo publicado (ex: em 2026, use a DFP de 2025). Para **Caixa e Dívida Bruta**, utilize preferencialmente o último balanço trimestral (ITR) disponível para capturar a posição patrimonial mais recente, pois dívidas e caixas sofrem grandes oscilações ao longo do ano.
-> * **Prioridade da pasta `reports/`:** Se o usuário colocar um PDF recente na pasta `reports/`, utilize esse documento como fonte primária da verdade.
-
-1. **Documentos Oficiais (DFP / ITR):**
-   * Procure por relatórios oficiais na pasta `reports/` ou PDFs baixados do RI da empresa.
-   * Extraia via script ou leitura literal (sem estimativas):
-     * **Caixa e Equivalentes + Aplicações Financeiras** (posição do trimestre mais recente disponível).
-     * **Dívida Bruta Total** (Empréstimos de Curto e Longo Prazo, Debêntures, Financiamentos do último trimestre).
-     * **Dívida Líquida** = Dívida Bruta - Caixa *(se Caixa > Dívida, o valor é NEGATIVO)*.
-     * **Número Total de Ações / Units emitidas** (em Milhões): Verifique se houve bonificação recente de ações, desdobramento (split) ou cancelamento de ações em tesouraria após a data da última DFP.
-     * **FCO (Fluxo de Caixa Operacional)** anual normalizado.
-     * **CAPEX** (Adições ao Imobilizado e Intangível). *Atenção: Diferencie CapEx de Manutenção de CapEx de Expansão quando divulgado.*
-
-2. **Parâmetros Macroeconômicos e Financeiros Atuais (Tempo Real):**
-   * Taxa do **Tesouro IPCA+ longo** (ex: NTN-B 2035 ou 2045) $\to R_{f,\text{real}}$ (geralmente entre 6.0% e 6.8%).
-   * **Expectativa de Inflação IPCA** de longo prazo (meta CMN + Focus, tipicamente 3.5% a 4.0%).
-   * **Prêmio de Risco de Mercado (ERP)** para o Brasil (Damodaran atualizado, tipicamente 5.5% a 6.5%).
-   * **Beta do Setor / Empresa** ($\beta$) desalavancado e realavancado.
-   * **Custo da Dívida ($K_d$ bruto):** Quase toda dívida de empresas brasileiras é pós-fixada (CDI + spread ou IPCA + spread). Calibre o $K_d$ com a taxa Selic/CDI **vigente no momento da análise**, somada ao spread médio de captação reportado no balanço mais recente da empresa. Não use taxas de juros de anos em que a Selic estava em outro patamar de ciclo.
+> * **Posição Patrimonial Recente:** Para Caixa e Dívida, utilize o último balanço trimestral (ITR) disponível.
+> * **Prioridade da pasta `reports/`:** Se o usuário colocar um relatório na pasta `reports/`, utilize esse documento como fonte primária da verdade.
 
 ---
 
-### Fase 2: O Presente e o Risco (Isolando a Matemática)
-Nunca realize cálculos de WACC ou juros compostos em texto livre. Utilize sempre o script de cálculo embutido.
+### Fase 2: Coleta de Variáveis Conforme o Fluxo
 
-1. **FCLF Inicial ($FCFF_0$):**
-   $$\text{FCLF}_0 = \text{FCO} - \text{CAPEX}_{\text{manutenção}}$$
-   *Se o FCLF do último ano foi distorcido por variação pontual de capital de giro, normalize pela média dos últimos 3 anos.*
+#### Para Fluxo A (DCF Concessões e Indústria):
+1. **FCO Bruto e CapEx:** Segregar CapEx de Sustentação, Expansão Remunerada (RAB) e CapEx Não Oneroso (obrigações compulsórias sem remuneração tarifária).
+2. **Dívida Financeira Líquida:** Dívida Bruta menos Caixa e Aplicações do último ITR.
+3. **Quase-Dívidas / Outros Passivos Onerosos:** Identificar passivos regulatórios (Agepar/Aneel), déficits atuariais de fundos de pensão pós-emprego (Fusanprev, Petros, Funcef) e contingências prováveis.
+4. **Base Acionária:** Total de ações emitidas ou Units equivalentes (Milhões).
+5. **DPA Projetado:** Dividendo por ação esperado para métricas de Décio Bazin (6% e 8%).
 
-2. **Estrutura de Capital e WACC (em termos nominais BRL):**
-   * $R_{f,\text{nominal}} = (1 + R_{f,\text{real}}) \times (1 + \text{IPCA}) - 1$
-   * $K_e = R_{f,\text{nominal}} + \beta \times \text{ERP}$
-   * $K_d(\text{líquido}) = K_d \times (1 - T)$, onde $T \approx 34\%$ (alíquota efetiva).
-   * $\text{WACC} = \left(\frac{E}{D+E}\right) K_e + \left(\frac{D}{D+E}\right) K_d(\text{líquido})$
+#### Para Fluxo B (Bancos e Seguradoras):
+1. **VPA (Valor Patrimonial por Ação):** Do último balanço trimestral publicado.
+2. **ROE Sustentável (%):** Média histórica normalizada ou projeção de ciclo de crédito.
+3. **Custo de Capital Próprio ($K_e$):** Calculado via CAPM nominal BRL ($R_f + \beta \times ERP$).
+4. **Payout Sustentável (%):** Compatível com a folga do Índice de Basileia / capital mínimo regulatório.
+5. **DPA Base:** $VPA \times ROE \times \text{Payout}$.
+
+#### Para Fluxo C (Holdings - Ex: Itaúsa):
+1. **Participações:** Quantidade de ações e cotação de mercado das investidas.
+2. **Preço Justo Intrínseco das Investidas:** Valor fundamentalista derivado no Fluxo B (para ITUB) ou Fluxo A (para CCR/Aegea/Dexco).
+3. **Dívida Líquida da Holding:** Debêntures e notas promissórias da holding menos seu caixa próprio.
+4. **Desconto de Holding Estrutural (%):** Média histórica (geralmente entre 18% e 22%).
+5. **Fluxo de Proventos Recebidos:** Dividendos pagos pelas investidas menos custos de estrutura da holding.
+
+#### Para Fluxo D (Operadoras de Saúde ANS):
+1. **Receita Líquida:** Contraprestações emitidas de planos de saúde.
+2. **MLR (Sinistralidade Médica %):** Eventos indenizáveis / Receita Líquida.
+3. **Resultado Financeiro:** Ganhos obtidos com o *float* das reservas técnicas.
+4. **Retenção para Margem de Solvência da ANS (%):** Capital regulatório retido.
+5. **Custo de Capital Próprio ($K_e$).**
 
 ---
 
-### Fase 3: O Futuro (Isolando a Narrativa)
+### Fase 3: Parâmetros Macroeconômicos Padronizados (WACC / Ke)
+
+* **Taxa Livre de Risco Real ($R_{f,\text{real}}$):** ETTJ Tesouro IPCA+ (NTN-B) de referência longa (10 a 20 anos).
+* **Inflação Esperada:** Mediana do Relatório Focus (Meta de Inflação de longo prazo).
+* **Equity Risk Premium (ERP Brasil):** Entre 5,0% e 6,5%.
+* **Spread de Governança / Risco Estatal:** Adicionar de 0,5% a 1,5% para empresas de controle estatal.
+
+---
+
+### Fase 4: Execução Exata via Python & Modo Cego
 
 > [!IMPORTANT]
-> **ÂNCORA TEMPORAL DA PROJEÇÃO ($t=0$ e $t=1$):**
-> * **$t=0$ (Ano Base):** É o exercício mais recente já encerrado (última DFP publicada ou LTM).
-> * **$t=1$ (Ano 1 da Projeção):** DEVE ser obrigatoriamente o próximo ano fiscal ainda não encerrado. **NUNCA projete como 'Ano 1' um ano que já passou**.
->   * *Exemplo:* Se o valuation ocorre em 2026 com base na DFP de 2025, o **Ano 1 é 2026**, o **Ano 2 é 2027**, etc.
->   * Documente explicitamente na justificativa quais anos civis correspondem aos Anos 1 a 5.
+> **O MODO CEGO É OBRIGATÓRIO (BLIND VALUATION):**
+> * O agente **NUNCA DEVE CITAR NEM CALCULAR EM TEXTO NO CHAT** o Preço Justo, Preço Teto ou Cotação Atual.
+> * Todos os preços ficam guardados **exclusivamente dentro do arquivo JSON** gerado em `valuations/<TICKER>_valuation.json`.
+> * No chat, apresente **apenas o Dossiê das Premissas Econômicas** para análise e questionamento do usuário.
 
-1. **Anos de Projeção:**
-   * Padrão: 5 anos de projeção explícita ($t=1 \dots t=5$).
-2. **Taxas de Crescimento Anual ($g_1 \dots g_5$):**
-   * Baseie-se no cronograma de CAPEX mais recente, novas concessões e revisões tarifárias periódicas definitivas (ex: AGEPAR, ANEEL, ANTT).
-   * Crie uma trajetória de desaceleração gradual em direção ao crescimento perpétuo.
-3. **Crescimento Perpétuo ($g_{\text{perp}}$):**
-   * Deve ser estritamente menor que o WACC ($g_{\text{perp}} < \text{WACC}$).
-   * No Brasil (nominal), costuma ficar entre **2.5% e 4.0%** (alinhado ao PIB de longo prazo + inflação).
+#### Comandos de Execução por Tipo de Empresa:
 
----
+**1. Para Concessões, Utilities e Indústria (DCF):**
+```bash
+python .agents/skills/dcf-valuation/scripts/calc_dcf.py \
+  --ticker <TICKER> \
+  --fclf <FCFF_INICIAL_MI> \
+  --taxas <G1> <G2> <G3> <G4> <G5> \
+  --wacc <WACC_PCT> \
+  --cresc-perp <G_PERP_PCT> \
+  --divida-liq <DIVIDA_FINANCEIRA_LIQ_MI> \
+  --outros-passivos <PASSIVOS_REGULATORIOS_ATUARIAIS_MI> \
+  --num-acoes <ACOES_MI> \
+  --margem 20.0 \
+  --dpa <DPA_PROJETADO> \
+  --empresa "<NOME>" \
+  --setor "<SETOR>"
+```
 
-### Fase 4: O Veredito Cego (Blind Valuation) e Dossiê de Premissas
+**2. Para Bancos e Seguradoras (Gordon & DDM):**
+```bash
+python .agents/skills/dcf-valuation/scripts/calc_financials.py \
+  --ticker <TICKER> \
+  --vpa <VPA_REAIS> \
+  --roe <ROE_PCT> \
+  --ke <KE_PCT> \
+  --cresc-perp <G_PERP_PCT> \
+  --payout <PAYOUT_PCT> \
+  --num-acoes <ACOES_MI> \
+  --margem 20.0 \
+  --tipo banco \
+  --empresa "<NOME>" \
+  --setor "Bancos"
+```
 
-> [!IMPORTANT]
-> **REGRA DE OURO (BLIND TOTAL — NUNCA REVELE OU PESQUISE PREÇOS NO CHAT):**
-> * O agente **NÃO DEVE** pesquisar ou mencionar a cotação atual de mercado da ação.
-> * O agente **NÃO DEVE** divulgar no chat o Preço Justo calculado, o Preço Teto ou qualquer veredito de compra/venda (ex: 'COMPRAR', 'BARATA').
-> * **Objetivo:** Permitir que o usuário analise, questione e valide as premissas econômicas (WACC, FCLF, Crescimento, Dívida) de forma 100% isenta, sem qualquer viés de ancoragem no preço final ou na cotação de mercado.
-> * **Onde fica o preço?** O Preço Justo e Preço Teto calculados ficam salvos **estritamente dentro do arquivo JSON** gerado em `valuations/<TICKER>_valuation.json`, para serem revelados na Calculadora Web apenas quando o usuário importar o arquivo.
+**3. Para Holdings (SOTP Intrínseco & Mercado):**
+```bash
+python .agents/skills/dcf-valuation/scripts/calc_holding.py \
+  --ticker ITSA4 \
+  --itub-acoes 3500.0 \
+  --itub-preco-mercado <COTACAO_ITUB> \
+  --itub-preco-justo <PRECO_JUSTO_ITUB_DO_FLUXO_B> \
+  --itub-dpa <DPA_ITUB> \
+  --outros-ativos-mercado <OUTROS_MERCADO_MI> \
+  --outros-ativos-justo <OUTROS_JUSTO_MI> \
+  --outros-ativos-dpa <OUTROS_PROVENTOS_MI> \
+  --divida-holding <DIVIDA_ITSA_MI> \
+  --num-acoes 10300.0 \
+  --desconto 20.0 \
+  --margem 20.0
+```
 
-1. **Executar o Script de Cálculo:**
-   Execute o script `.agents/skills/dcf-valuation/scripts/calc_dcf.py` passando os parâmetros coletados:
-   ```bash
-   python3 .agents/skills/dcf-valuation/scripts/calc_dcf.py \
-     --ticker <TICKER> \
-     --fclf <VALOR_MI> \
-     --taxas <G1> <G2> <G3> <G4> <G5> \
-     --wacc <WACC_PCT> \
-     --cresc-perp <G_PERP_PCT> \
-     --divida-liq <DIVIDA_LIQ_MI> \
-     --num-acoes <ACOES_MI> \
-     --margem <MARGEM_SEGURANCA_PCT> \
-     --empresa "<NOME_EMPRESA>" \
-     --setor "<SETOR>" \
-     --justificativa "<RESUMO_DAS_PREMISSAS>"
-   ```
-
-2. **Formato do JSON Gerado:**
-   O script salvará o arquivo em `valuations/<TICKER>_valuation.json`, pronto para ser utilizado ou importado na aplicação:
-   ```json
-   {
-     "ticker": "SAPR4",
-     "fclf": 1850.5,
-     "anosProjecao": 5,
-     "taxasCrescimento": [6.0, 5.5, 5.0, 4.5, 4.0],
-     "wacc": 11.8,
-     "crescPerp": 3.0,
-     "dividaLiquida": 1784.6,
-     "numAcoes": 1511.21,
-     "margemSeguranca": 20.0,
-     "precoJusto": 14.42,
-     "precoTeto": 11.54,
-     "detalhes": {
-       "soma_pv_fluxos": 7770.47,
-       "enterprise_value": 23595.04,
-       "equity_value": 19095.04,
-       "projecoes": [ ... ],
-       "metadata": { ... }
-     }
-   }
-   ```
-
-3. **Apresentação Obrigatória no Chat (Dossiê das Premissas para Análise do Usuário):**
-   Ao finalizar a execução, o agente deve apresentar **exclusivamente o Dossiê das Premissas e seus fundamentos**, convidando o usuário a questioná-las antes de importar:
-   * **1. Fluxo de Caixa Livre Inicial ($FCFF_0$):** Apresentar o valor adotado (em R$ Mi) e detalhar a memória contábil (FCO bruto menos CapEx de manutenção, explicando se houve ajuste por universalização/expansão ou normalização de capital de giro).
-   * **2. Dívida Líquida e Caixa:** Informar o valor líquido adotado (em R$ Mi), detalhando a data-base do balanço (trimestre/ano), Caixa bruto e Dívida bruta.
-   * **3. Base Acionária:** Número de ações/Units consideradas e se houve evento societário recente (bonificação/desdobramento).
-   * **4. Custo de Capital (WACC Nominal):** Detalhar todos os blocos: taxa livre de risco ($R_{f,\text{real}}$ e nominal), inflação esperada, Beta adotado, ERP Brasil, custo da dívida ($K_d$ bruto e líquido pós-IR) e a proporção de capital próprio vs. terceiros.
-   * **5. Trajetória de Crescimento ($g_1 \dots g_5$ e $g_{\text{perp}}$):** Justificar os percentuais ano a ano com base no plano de investimentos, concessões, expansão e capacidade operacional da empresa.
-   * **Conclusão:** Informar o caminho do arquivo JSON gerado (`valuations/<TICKER>_valuation.json`) para que o usuário possa importá-lo na Calculadora Web assim que aprovar as premissas.
+**4. Para Operadoras de Saúde ANS:**
+```bash
+python .agents/skills/dcf-valuation/scripts/calc_saude.py \
+  --ticker <TICKER> \
+  --receita <RECEITA_MI> \
+  --mlr <SINISTRALIDADE_PCT> \
+  --ke <KE_PCT> \
+  --cresc-perp <G_PERP_PCT> \
+  --num-acoes <ACOES_MI> \
+  --margem 20.0
+```
 
 ---
 
-## 🎯 Regras Específicas do Mercado Brasileiro (B3)
-
-1. **Ações do Tipo "UNIT" (ex: ALUP11, SAPR11, KLBN11, TAEE11):**
-   * Units são pacotes de ações (ex: SAPR11 = 1 ON + 4 PN).
-   * Certifique-se de que o campo `numAcoes` reflita o **total de Units equivalentes**, e não a soma bruta de ONs e PNs individuais, para que o Preço Justo coincida diretamente com a cotação da Unit negociada.
-2. **Caixa Líquido (Dívida Líquida Negativa):**
-   * Se a empresa tiver mais caixa que dívida (ex: WEG, Odontoprev), informe `--divida-liq` com valor negativo (ex: `-1500.0`).
-3. **Moeda e Inflação:**
-   * Mantenha WACC e Crescimento na mesma base: ambos **nominais** ou ambos **reais**. O padrão da ferramenta é **Nominal BRL**.
-4. **Atualização da Posição de Dívida Líquida (Último Trimestre / ITR):**
-   * Enquanto os fluxos de caixa (FCO, CapEx, D&A) e receita devem ser analisados em base anual completa (DFP ou LTM 12 meses acumulados), a **Dívida Líquida (Caixa e Dívida Bruta)** deve refletir a foto mais recente possível (do último ITR trimestral publicado), evitando carregar dívidas quitadas ou desatualizadas de exercícios passados.
-5. **Checklist Obrigatório de Recência Pré-Cálculo:**
-   Antes de executar o `calc_dcf.py`, o agente deve verificar se todos os pontos abaixo foram atendidos:
-   * [x] **Data Corrente Identificada:** O ano civil atual foi considerado; nenhuma busca com anos passados fixos foi executada.
-   * [x] **Dívida & Caixa Recentes:** A Dívida Líquida reflete o balanço mais recente publicado (último ITR ou DFP).
-   * [x] **Horizonte de Projeção ($t=1$):** O Ano 1 é um ano futuro/vigente; nenhum ano que já se encerrou foi projetado.
-   * [x] **Custo da Dívida ($K_d$):** Foi calibrado com a taxa Selic/CDI vigente no mercado atual.
-   * [x] **Base Acionária Atual:** Foi verificado se ocorreram desdobramentos, bonificações ou cancelamento de ações recentes.
+### Apresentação no Chat: Dossiê das Premissas
+Após executar o script correspondente, apresente o Dossiê das Premissas no chat (sem citar preços):
+1. **Memória de Fluxos / Resultados:** Detalhe a origem dos dados contábeis (DFP/ITR).
+2. **Taxa de Desconto ($WACC$ ou $K_e$):** Abra todos os componentes macroeconômicos ($R_f$, inflação, beta, ERP).
+3. **Trajetória de Crescimento ($g$ e $g_{\text{perp}}$):** Justifique os percentuais ano a ano.
+4. **Estrutura Patrimonial:** Dívida financeira líquida, quase-dívidas regulatórias/atuariais e número de ações.
+5. **Métrica Previdenciária de Bazin:** DPA adotado e confirmação de integração dos Tetos de 6% e 8% no JSON.
+6. **Caminho do Arquivo:** Informe o caminho `valuations/<TICKER>_valuation.json` pronto para ser importado na Calculadora Web.

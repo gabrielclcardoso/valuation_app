@@ -196,6 +196,72 @@
       </div>
     </div>
 
+    {# ── Métricas Previdenciárias de Décio Bazin (quando disponíveis no JSON importado) ── #}
+    <template x-if="detalhesValuation && detalhesValuation.metrica_bazin">
+      <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-indigo-500/40 relative overflow-hidden">
+        <div class="flex items-center justify-between mb-4 border-b border-slate-700 pb-2">
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+              Método Previdenciário
+            </span>
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider">
+              Métricas de Décio Bazin & Yield-on-Cost
+            </h3>
+          </div>
+          <span class="text-xs text-slate-400 font-mono" x-text="'DPA Ref: ' + formatMoney(detalhesValuation.metrica_bazin.dpa_projetado)"></span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700">
+            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Teto Bazin (6% a.a.)</p>
+            <p class="text-xl font-black text-emerald-400 font-mono mt-1" x-text="formatMoney(detalhesValuation.metrica_bazin.preco_teto_bazin_6pct)"></p>
+            <p class="text-[10px] text-slate-500 mt-1">Margem mínima clássica</p>
+          </div>
+
+          <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700">
+            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Teto Bazin (8% a.a.)</p>
+            <p class="text-xl font-black text-blue-400 font-mono mt-1" x-text="formatMoney(detalhesValuation.metrica_bazin.preco_teto_bazin_8pct)"></p>
+            <p class="text-[10px] text-slate-500 mt-1">Margem exigente (Selic alta)</p>
+          </div>
+
+          <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700">
+            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">YoC no Preço Teto</p>
+            <p class="text-xl font-black text-indigo-400 font-mono mt-1" x-text="(detalhesValuation.metrica_bazin.yield_on_cost_no_preco_teto_modelo || detalhesValuation.metrica_bazin.yield_on_cost_no_preco_teto_dcf || 0).toFixed(2) + '%'"></p>
+            <p class="text-[10px] text-slate-500 mt-1">Dividend Yield inicial no teto</p>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    {# ── Comparativo de Cenários Estruturados (quando disponíveis no JSON) ── #}
+    <template x-if="detalhesValuation && detalhesValuation.cenarios">
+      <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700">
+        <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-700 pb-2">
+          Comparativo de Cenários do Valuation
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <template x-for="(cen, chave) in detalhesValuation.cenarios" :key="chave">
+            <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 flex flex-col justify-between">
+              <div>
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-400" x-text="chave.replace('_', ' ')"></p>
+                <p class="text-xs text-slate-500 mt-0.5" x-text="cen.descricao"></p>
+              </div>
+              <div class="flex items-center justify-between mt-4 pt-3 border-t border-slate-800">
+                <div>
+                  <span class="text-[10px] uppercase font-bold text-slate-500">Preço Justo</span>
+                  <p class="text-base font-black text-white font-mono" x-text="formatMoney(cen.preco_justo || cen.preco_com_desconto)"></p>
+                </div>
+                <div class="text-right">
+                  <span class="text-[10px] uppercase font-bold text-slate-500">Preço Teto</span>
+                  <p class="text-base font-black text-emerald-400 font-mono" x-text="formatMoney(cen.preco_teto)"></p>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </template>
+
     {# ── Projection detail table (shared cash flows) ─────────────────────────
     #}
     <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700">
