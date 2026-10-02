@@ -25,19 +25,40 @@ document.addEventListener("alpine:init", () => {
 
     importarJSON() {
       try {
-        const data = JSON.parse(this.jsonParaImportar);
+        const raw = this.jsonParaImportar.trim();
+        if (!raw) {
+          alert("Por favor, cole o JSON no campo antes de importar.");
+          return;
+        }
+        const data = JSON.parse(raw);
+
         if (data.ticker) {
-          const preco = data.precoAtual || (this.tickersList[0] ? this.tickersList[0].precoAtual : 0);
+          const preco = data.precoAtual || data.preco_atual || (this.tickersList[0] ? this.tickersList[0].precoAtual : 0);
           this.tickersList = [{ ticker: data.ticker, precoAtual: preco }];
         }
-        if (data.fclf !== undefined) this.fclf = parseFloat(data.fclf);
-        if (data.anosProjecao !== undefined) this.anosProjecao = parseInt(data.anosProjecao);
-        if (Array.isArray(data.taxasCrescimento)) this.taxasCrescimento = data.taxasCrescimento.map(Number);
+        const fclf = data.fclf !== undefined ? data.fclf : data.fclf_inicial;
+        if (fclf !== undefined) this.fclf = parseFloat(fclf);
+
+        const anos = data.anosProjecao !== undefined ? data.anosProjecao : data.anos_projecao;
+        if (anos !== undefined) this.anosProjecao = parseInt(anos);
+
+        const taxas = data.taxasCrescimento || data.taxas_crescimento;
+        if (Array.isArray(taxas)) this.taxasCrescimento = taxas.map(Number);
+
         if (data.wacc !== undefined) this.wacc = parseFloat(data.wacc);
-        if (data.crescPerp !== undefined) this.crescPerp = parseFloat(data.crescPerp);
-        if (data.dividaLiquida !== undefined) this.dividaLiquida = parseFloat(data.dividaLiquida);
-        if (data.numAcoes !== undefined) this.numAcoes = parseFloat(data.numAcoes);
-        if (data.margemSeguranca !== undefined) this.margemSeguranca = parseFloat(data.margemSeguranca);
+
+        const crescPerp = data.crescPerp !== undefined ? data.crescPerp : data.cresc_perp;
+        if (crescPerp !== undefined) this.crescPerp = parseFloat(crescPerp);
+
+        const divida = data.dividaLiquida !== undefined ? data.dividaLiquida : data.divida_liquida;
+        if (divida !== undefined) this.dividaLiquida = parseFloat(divida);
+
+        const acoes = data.numAcoes !== undefined ? data.numAcoes : data.num_acoes;
+        if (acoes !== undefined) this.numAcoes = parseFloat(acoes);
+
+        const margem = data.margemSeguranca !== undefined ? data.margemSeguranca : data.margem_seguranca;
+        if (margem !== undefined) this.margemSeguranca = parseFloat(margem);
+
         this.modalImportarAberto = false;
         this.jsonParaImportar = "";
         if (data.ticker) {

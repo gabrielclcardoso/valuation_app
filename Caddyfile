@@ -10,7 +10,7 @@ valuation.supermeia.com {
     handle_path /static/* {
         root * /srv/static
         file_server
-        header Cache-Control "public, max-age=604800, must-revalidate"
+        header Cache-Control "no-cache, must-revalidate"
     }
 
     # Faz o proxy de todas as outras requisições para a API FastAPI

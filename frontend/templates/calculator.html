@@ -1,10 +1,13 @@
-{% extends "base.html" %} {% block content %}
+{% extends "base.html" %}
+{% block head_scripts %}
+<script defer src="/static/calculator.js?v=2.2"></script>
+{% endblock %}
+
+{% block content %}
 <div class="p-4 sm:p-8" x-data="valuationApp" x-cloak>
   <div class="max-w-6xl mx-auto space-y-6">
     {% include "partials/header.html" %} {% include "partials/tab_calc.html" %}
     {% include "partials/tab_history.html" %}
   </div>
 </div>
-
-<script src="/static/calculator.js"></script>
 {% endblock %}
