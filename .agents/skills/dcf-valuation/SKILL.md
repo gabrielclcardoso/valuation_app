@@ -98,11 +98,14 @@ Nunca realize cálculos de WACC ou juros compostos em texto livre. Utilize sempr
 
 ---
 
-### Fase 4: O Veredito Cego (Blind Valuation) e Geração do JSON
+### Fase 4: O Veredito Cego (Blind Valuation) e Dossiê de Premissas
 
 > [!IMPORTANT]
-> **REGRA DE OURO (ANTI-ANCORAGEM):**
-> O agente NÃO deve consultar a cotação de mercado da ação antes de concluir o cálculo do Preço Justo e Preço Teto. O valuation deve ser 100% agnóstico ao preço negociado em bolsa.
+> **REGRA DE OURO (BLIND TOTAL — NUNCA REVELE OU PESQUISE PREÇOS NO CHAT):**
+> * O agente **NÃO DEVE** pesquisar ou mencionar a cotação atual de mercado da ação.
+> * O agente **NÃO DEVE** divulgar no chat o Preço Justo calculado, o Preço Teto ou qualquer veredito de compra/venda (ex: 'COMPRAR', 'BARATA').
+> * **Objetivo:** Permitir que o usuário analise, questione e valide as premissas econômicas (WACC, FCLF, Crescimento, Dívida) de forma 100% isenta, sem qualquer viés de ancoragem no preço final ou na cotação de mercado.
+> * **Onde fica o preço?** O Preço Justo e Preço Teto calculados ficam salvos **estritamente dentro do arquivo JSON** gerado em `valuations/<TICKER>_valuation.json`, para serem revelados na Calculadora Web apenas quando o usuário importar o arquivo.
 
 1. **Executar o Script de Cálculo:**
    Execute o script `.agents/skills/dcf-valuation/scripts/calc_dcf.py` passando os parâmetros coletados:
@@ -125,17 +128,17 @@ Nunca realize cálculos de WACC ou juros compostos em texto livre. Utilize sempr
    O script salvará o arquivo em `valuations/<TICKER>_valuation.json`, pronto para ser utilizado ou importado na aplicação:
    ```json
    {
-     "ticker": "SAPR11",
+     "ticker": "SAPR4",
      "fclf": 1850.5,
      "anosProjecao": 5,
      "taxasCrescimento": [6.0, 5.5, 5.0, 4.5, 4.0],
      "wacc": 11.8,
      "crescPerp": 3.0,
-     "dividaLiquida": 4500.0,
-     "numAcoes": 302.5,
+     "dividaLiquida": 1784.6,
+     "numAcoes": 1511.21,
      "margemSeguranca": 20.0,
-     "precoJusto": 63.12,
-     "precoTeto": 50.50,
+     "precoJusto": 14.42,
+     "precoTeto": 11.54,
      "detalhes": {
        "soma_pv_fluxos": 7770.47,
        "enterprise_value": 23595.04,
@@ -146,11 +149,14 @@ Nunca realize cálculos de WACC ou juros compostos em texto livre. Utilize sempr
    }
    ```
 
-3. **Veredito Final:**
-   Somente após gerar o JSON, consulte a cotação atual (via endpoint `/api/quote/{ticker}` ou busca) para informar ao usuário:
-   * **COMPRAR (Abaixo do Teto):** Cotação $\le$ Preço Teto.
-   * **COMPRAR (Sem Margem):** Preço Teto $<$ Cotação $<$ Preço Justo.
-   * **NÃO COMPRAR (Cara):** Cotação $\ge$ Preço Justo.
+3. **Apresentação Obrigatória no Chat (Dossiê das Premissas para Análise do Usuário):**
+   Ao finalizar a execução, o agente deve apresentar **exclusivamente o Dossiê das Premissas e seus fundamentos**, convidando o usuário a questioná-las antes de importar:
+   * **1. Fluxo de Caixa Livre Inicial ($FCFF_0$):** Apresentar o valor adotado (em R$ Mi) e detalhar a memória contábil (FCO bruto menos CapEx de manutenção, explicando se houve ajuste por universalização/expansão ou normalização de capital de giro).
+   * **2. Dívida Líquida e Caixa:** Informar o valor líquido adotado (em R$ Mi), detalhando a data-base do balanço (trimestre/ano), Caixa bruto e Dívida bruta.
+   * **3. Base Acionária:** Número de ações/Units consideradas e se houve evento societário recente (bonificação/desdobramento).
+   * **4. Custo de Capital (WACC Nominal):** Detalhar todos os blocos: taxa livre de risco ($R_{f,\text{real}}$ e nominal), inflação esperada, Beta adotado, ERP Brasil, custo da dívida ($K_d$ bruto e líquido pós-IR) e a proporção de capital próprio vs. terceiros.
+   * **5. Trajetória de Crescimento ($g_1 \dots g_5$ e $g_{\text{perp}}$):** Justificar os percentuais ano a ano com base no plano de investimentos, concessões, expansão e capacidade operacional da empresa.
+   * **Conclusão:** Informar o caminho do arquivo JSON gerado (`valuations/<TICKER>_valuation.json`) para que o usuário possa importá-lo na Calculadora Web assim que aprovar as premissas.
 
 ---
 

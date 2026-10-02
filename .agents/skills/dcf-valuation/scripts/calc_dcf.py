@@ -169,13 +169,17 @@ def main():
     )
 
     print(f"\n=======================================================")
-    print(f" VALUATION DCF GERADO COM SUCESSO: {resultado['ticker']}")
+    print(f" VALUATION DCF: PARÂMETROS REGISTRADOS: {resultado['ticker']}")
     print(f"=======================================================")
-    print(f"• Preço Justo: R$ {resultado['precoJusto']:.2f}")
-    print(f"• Preço Teto ({resultado['margemSeguranca']}% margem): R$ {resultado['precoTeto']:.2f}")
-    print(f"• Enterprise Value (EV): R$ {resultado['detalhes']['enterprise_value']:,.2f} Mi")
-    print(f"• Equity Value: R$ {resultado['detalhes']['equity_value']:,.2f} Mi")
-    print(f"• Arquivo JSON salvo em: {path}")
+    print(f"• FCLF Inicial: R$ {resultado['fclf']:,.2f} Mi")
+    print(f"• WACC Nominal: {resultado['wacc']:.2f}% a.a.")
+    print(f"• Trajetória de Crescimento (5 anos): {resultado['taxasCrescimento']}")
+    print(f"• Crescimento Perpétuo (g_perp): {resultado['crescPerp']:.2f}% a.a.")
+    print(f"• Dívida Líquida Adotada: R$ {resultado['dividaLiquida']:,.2f} Mi")
+    print(f"• Base Acionária: {resultado['numAcoes']:,.2f} Mi ações/Units")
+    print(f"• Margem de Segurança: {resultado['margemSeguranca']:.1f}%")
+    print(f"• Arquivo JSON salvo com sucesso em: {path}")
+    print(f"  [Preço Justo e Preço Teto preservados no JSON para revelação na Calculadora]")
     print(f"=======================================================\n")
 
 
