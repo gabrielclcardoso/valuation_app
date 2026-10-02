@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Valuation App local data & reports
+data/*.db
+data/*.db-wal
+data/*.db-shm
+reports/*.pdf
+valuations/*.json
