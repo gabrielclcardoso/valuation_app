@@ -23,6 +23,13 @@ document.addEventListener("alpine:init", () => {
     modalImportarAberto: false,
     jsonParaImportar: "",
     detalhesValuation: null,
+    modeloAtual: "dcf_fcff",
+    importedPrecoJusto: null,
+    importedPrecoTeto: null,
+
+    mudarModelo(novo) {
+      this.modeloAtual = novo;
+    },
 
     importarJSON() {
       try {
@@ -60,6 +67,20 @@ document.addEventListener("alpine:init", () => {
         const margem = data.margemSeguranca !== undefined ? data.margemSeguranca : data.margem_seguranca;
         if (margem !== undefined) this.margemSeguranca = parseFloat(margem);
 
+        if (data.modelo) {
+          this.modeloAtual = data.modelo;
+        } else if (data.detalhes?.modelo_utilizado) {
+          const mod = data.detalhes.modelo_utilizado.toLowerCase();
+          if (mod.includes("gordon") || mod.includes("financeiro")) this.modeloAtual = "gordon_ddm";
+          else if (mod.includes("sotp") || mod.includes("holding")) this.modeloAtual = "sotp_holding";
+          else if (mod.includes("saúde") || mod.includes("ans")) this.modeloAtual = "saude_ans";
+          else this.modeloAtual = "dcf_fcff";
+        } else {
+          this.modeloAtual = "dcf_fcff";
+        }
+
+        this.importedPrecoJusto = data.precoJusto !== undefined ? parseFloat(data.precoJusto) : null;
+        this.importedPrecoTeto = data.precoTeto !== undefined ? parseFloat(data.precoTeto) : null;
         this.detalhesValuation = data.detalhes || null;
         this.modalImportarAberto = false;
         this.jsonParaImportar = "";
@@ -310,9 +331,14 @@ document.addEventListener("alpine:init", () => {
       const nAcoes = parseFloat(this.numAcoes) || 0;
       const equity = ev - dLiquida;
 
-      const precoJusto = nAcoes > 0 ? Math.max(0, equity / nAcoes) : 0;
+      let precoJusto = nAcoes > 0 ? Math.max(0, equity / nAcoes) : 0;
       const mSeguranca = parseFloat(this.margemSeguranca) || 0;
-      const precoTeto = precoJusto * (1 - mSeguranca / 100);
+      let precoTeto = precoJusto * (1 - mSeguranca / 100);
+
+      if (this.importedPrecoJusto !== null && (this.modeloAtual === 'sotp_holding' || this.modeloAtual === 'gordon_ddm' || this.modeloAtual === 'saude_ans')) {
+        precoJusto = this.importedPrecoJusto;
+        precoTeto = precoJusto * (1 - mSeguranca / 100);
+      }
 
       return {
         erro,

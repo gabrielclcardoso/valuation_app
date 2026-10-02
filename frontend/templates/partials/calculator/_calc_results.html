@@ -78,123 +78,279 @@
       </div>
     </template>
 
-    {# ── 9-Steps summary (shared premissas — same for all tickers) ───────────
-    #}
-    <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700">
-      <h3 class="text-lg font-bold text-white mb-6">O Cálculo dos 9 Passos</h3>
+    {# ── 9-Steps summary (Modo DCF Tradicional: Infra / Concessões / Indústria) ── #}
+    <template x-if="modeloAtual === 'dcf_fcff' || (!modeloAtual && !detalhesValuation)">
+      <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700">
+        <h3 class="text-lg font-bold text-white mb-6">O Cálculo dos 9 Passos (DCF por FCFF)</h3>
 
-      <div class="space-y-4">
-        {# Passos 1–2 and 3–5 #}
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div class="bg-slate-900 p-4 rounded-lg border border-slate-700">
-            <p class="text-xs font-bold text-slate-500">Passos 1 e 2</p>
-            <p class="text-sm font-medium text-slate-300 mt-1">
-              FCLF Inicial:
-              <span
-                class="font-mono text-white"
-                x-text="'R$ ' + formatNum(fclf)"
-              ></span>
-            </p>
-            <p class="text-sm font-medium text-slate-300">
-              Período:
-              <span
-                class="font-mono text-white"
-                x-text="anosProjecao + ' Anos'"
-              ></span>
-            </p>
+        <div class="space-y-4">
+          {# Passos 1–2 and 3–5 #}
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="bg-slate-900 p-4 rounded-lg border border-slate-700">
+              <p class="text-xs font-bold text-slate-500">Passos 1 e 2</p>
+              <p class="text-sm font-medium text-slate-300 mt-1">
+                FCLF Inicial:
+                <span
+                  class="font-mono text-white"
+                  x-text="'R$ ' + formatNum(fclf)"
+                ></span>
+              </p>
+              <p class="text-sm font-medium text-slate-300">
+                Período:
+                <span
+                  class="font-mono text-white"
+                  x-text="anosProjecao + ' Anos'"
+                ></span>
+              </p>
+            </div>
+            <div class="bg-slate-900 p-4 rounded-lg border border-slate-700">
+              <p class="text-xs font-bold text-slate-500">Passos 3, 4 e 5</p>
+              <p class="text-sm font-medium text-slate-300 mt-1">
+                WACC:
+                <span class="font-mono text-white" x-text="wacc + '%'"></span>
+              </p>
+              <p class="text-sm font-medium text-slate-300">
+                Σ Valor Presente:
+                <span
+                  class="font-mono font-bold text-blue-400"
+                  x-text="'R$ ' + formatNum(resultados.somaPV)"
+                ></span>
+              </p>
+            </div>
           </div>
-          <div class="bg-slate-900 p-4 rounded-lg border border-slate-700">
-            <p class="text-xs font-bold text-slate-500">Passos 3, 4 e 5</p>
-            <p class="text-sm font-medium text-slate-300 mt-1">
-              WACC:
-              <span class="font-mono text-white" x-text="wacc + '%'"></span>
-            </p>
-            <p class="text-sm font-medium text-slate-300">
-              Σ Valor Presente:
-              <span
-                class="font-mono font-bold text-blue-400"
-                x-text="'R$ ' + formatNum(resultados.somaPV)"
-              ></span>
-            </p>
-          </div>
-        </div>
 
-        {# Passo 6: Valor Terminal #}
-        <div
-          class="bg-indigo-900/30 p-4 rounded-lg border border-indigo-500/30"
-        >
-          <p class="text-xs font-bold text-indigo-400">
-            Passo 6: Valor Terminal (A partir do Ano
-            <span x-text="anosProjecao + 1"></span>)
-          </p>
+          {# Passo 6: Valor Terminal #}
           <div
-            class="flex flex-col sm:flex-row justify-between mt-1 text-sm text-indigo-200"
+            class="bg-indigo-900/30 p-4 rounded-lg border border-indigo-500/30"
           >
-            <p>
-              Valor Terminal Bruto: R$
-              <span x-text="formatNum(resultados.valorTerminal)"></span>
+            <p class="text-xs font-bold text-indigo-400">
+              Passo 6: Valor Terminal (A partir do Ano
+              <span x-text="anosProjecao + 1"></span>)
             </p>
-            <p class="font-bold text-indigo-300">
-              VP Terminal:
-              <span
-                class="font-mono text-indigo-400"
-                x-text="'R$ ' + formatNum(resultados.vpTerminal)"
-              ></span>
-            </p>
-          </div>
-        </div>
-
-        {# Passo 7: Enterprise Value #}
-        <div
-          class="bg-slate-900 p-4 rounded-lg border border-slate-700 flex justify-between items-center"
-        >
-          <p class="text-xs font-bold text-slate-500">
-            Passo 7: Enterprise Value
-          </p>
-          <p
-            class="text-lg font-black font-mono text-white"
-            x-text="'R$ ' + formatNum(resultados.ev)"
-          ></p>
-        </div>
-
-        {# Passo 8: Equity Value / Preço Justo — shared result #}
-        <div
-          class="bg-slate-900 p-4 rounded-lg border border-slate-700 flex justify-between items-center"
-        >
-          <div>
-            <p class="text-xs font-bold text-slate-500">
-              Passo 8: Equity Value e Preço Justo
-            </p>
-            <p class="text-xs text-slate-400">
-              EV - Dívida Dividido pelas Ações
-            </p>
-          </div>
-          <p class="text-lg font-black font-mono text-white">
-            <span x-text="formatMoney(resultados.precoJusto)"></span>/ação
-          </p>
-        </div>
-
-        {# Passo 9: Preço Teto — shared result #}
-        <div
-          class="bg-emerald-900/30 p-4 rounded-lg border border-emerald-500/30 flex justify-between items-center"
-        >
-          <div>
-            <p
-              class="text-xs font-bold text-emerald-500 uppercase tracking-wide"
+            <div
+              class="flex flex-col sm:flex-row justify-between mt-1 text-sm text-indigo-200"
             >
-              Passo 9: Preço Teto
+              <p>
+                Valor Terminal Bruto: R$
+                <span x-text="formatNum(resultados.valorTerminal)"></span>
+              </p>
+              <p class="font-bold text-indigo-300">
+                VP Terminal:
+                <span
+                  class="font-mono text-indigo-400"
+                  x-text="'R$ ' + formatNum(resultados.vpTerminal)"
+                ></span>
+              </p>
+            </div>
+          </div>
+
+          {# Passo 7: Enterprise Value #}
+          <div
+            class="bg-slate-900 p-4 rounded-lg border border-slate-700 flex justify-between items-center"
+          >
+            <p class="text-xs font-bold text-slate-500">
+              Passo 7: Enterprise Value
             </p>
-            <p class="text-xs text-emerald-400/80">
-              Com <span x-text="margemSeguranca"></span>% de Margem
+            <p
+              class="text-lg font-black font-mono text-white"
+              x-text="'R$ ' + formatNum(resultados.ev)"
+            ></p>
+          </div>
+
+          {# Passo 8: Equity Value / Preço Justo — shared result #}
+          <div
+            class="bg-slate-900 p-4 rounded-lg border border-slate-700 flex justify-between items-center"
+          >
+            <div>
+              <p class="text-xs font-bold text-slate-500">
+                Passo 8: Equity Value e Preço Justo
+              </p>
+              <p class="text-xs text-slate-400">
+                EV - Dívida Dividido pelas Ações
+              </p>
+            </div>
+            <p class="text-lg font-black font-mono text-white">
+              <span x-text="formatMoney(resultados.precoJusto)"></span>/ação
             </p>
           </div>
-          <p
-            class="text-xl font-black font-mono text-emerald-400"
-            x-text="formatMoney(resultados.precoTeto)"
-          ></p>
+
+          {# Passo 9: Preço Teto — shared result #}
+          <div
+            class="bg-emerald-900/30 p-4 rounded-lg border border-emerald-500/30 flex justify-between items-center"
+          >
+            <div>
+              <p
+                class="text-xs font-bold text-emerald-500 uppercase tracking-wide"
+              >
+                Passo 9: Preço Teto
+              </p>
+              <p class="text-xs text-emerald-400/80">
+                Com <span x-text="margemSeguranca"></span>% de Margem
+              </p>
+            </div>
+            <p
+              class="text-xl font-black font-mono text-emerald-400"
+              x-text="formatMoney(resultados.precoTeto)"
+            ></p>
+          </div>
         </div>
       </div>
-    </div>
+    </template>
+
+    {# ── Painel Especializado: Bancos e Seguradoras (Gordon & DDM) ─────────── #}
+    <template x-if="modeloAtual === 'gordon_ddm' || (detalhesValuation && detalhesValuation.modelo_utilizado && detalhesValuation.modelo_utilizado.toLowerCase().includes('gordon'))">
+      <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700 space-y-5">
+        <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+          <div>
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              Setor Financeiro & Seguros
+            </span>
+            <h3 class="text-lg font-bold text-white mt-1">Modelo de Gordon Growth & DDM</h3>
+          </div>
+          <span class="text-xs font-mono text-slate-400">P/VP Justo e Fluxo ao Acionista</span>
+        </div>
+
+        {# Grid com métricas chave do banco/seguradora #}
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
+            <p class="text-[10px] uppercase font-bold text-slate-400">VPA</p>
+            <p class="text-lg font-black text-white font-mono mt-0.5" x-text="formatMoney(detalhesValuation ? detalhesValuation.vpa : 0)"></p>
+            <p class="text-[10px] text-slate-500">Patrimônio por Ação</p>
+          </div>
+          <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
+            <p class="text-[10px] uppercase font-bold text-slate-400">ROE Adotado</p>
+            <p class="text-lg font-black text-emerald-400 font-mono mt-0.5" x-text="(detalhesValuation ? detalhesValuation.roe_adotado_pct : 0) + '%'"></p>
+            <p class="text-[10px] text-slate-500">Rentabilidade sobre PL</p>
+          </div>
+          <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
+            <p class="text-[10px] uppercase font-bold text-slate-400">Custo Capital (Ke)</p>
+            <p class="text-lg font-black text-blue-400 font-mono mt-0.5" x-text="wacc + '%'"></p>
+            <p class="text-[10px] text-slate-500">Retorno Exigido (CAPM)</p>
+          </div>
+          <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
+            <p class="text-[10px] uppercase font-bold text-slate-400">P/VP Justo Teórico</p>
+            <p class="text-lg font-black text-indigo-400 font-mono mt-0.5" x-text="(detalhesValuation ? detalhesValuation.p_vp_justo_gordon : 0) + 'x'"></p>
+            <p class="text-[10px] text-slate-500">(ROE - g) / (Ke - g)</p>
+          </div>
+        </div>
+
+        {# Explicação do Modelo de Gordon #}
+        <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-700/80">
+          <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Fundamento da Avaliação Bancária</p>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Em instituições financeiras, depósitos e captações não configuram endividamento convencional, e a geração de caixa real para o acionista é ditada pelos limites do Índice de Basileia. O valor justo reflete a capacidade do banco de sustentar um <strong>ROE superior ao seu Custo de Oportunidade (Ke)</strong>, distribuindo dividendos sem comprometer o balanço.
+          </p>
+        </div>
+      </div>
+    </template>
+
+    {# ── Painel Especializado: Holdings (SOTP / Soma das Partes) ─────────────── #}
+    <template x-if="modeloAtual === 'sotp_holding' || (detalhesValuation && detalhesValuation.modelo_utilizado && detalhesValuation.modelo_utilizado.toLowerCase().includes('sotp'))">
+      <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700 space-y-5">
+        <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+          <div>
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+              Estrutura de Holding
+            </span>
+            <h3 class="text-lg font-bold text-white mt-1">Soma das Partes (SOTP Intrínseco & Mercado)</h3>
+          </div>
+          <span class="text-xs font-mono text-slate-400">Proteção contra Cotações Infladas</span>
+        </div>
+
+        {# Resumo do NAV e Desconto #}
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
+            <p class="text-[10px] uppercase font-bold text-slate-400">NAV Intrínseco Bruto</p>
+            <p class="text-base font-black text-emerald-400 font-mono mt-0.5" x-text="'R$ ' + formatNum(detalhesValuation ? detalhesValuation.total_intrinseco_bruto_mi : 0) + ' Mi'"></p>
+            <p class="text-[10px] text-slate-500">Valor Justo das Investidas</p>
+          </div>
+          <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
+            <p class="text-[10px] uppercase font-bold text-slate-400">NAV Mercado Bruto</p>
+            <p class="text-base font-black text-slate-300 font-mono mt-0.5" x-text="'R$ ' + formatNum(detalhesValuation ? detalhesValuation.total_mercado_bruto_mi : 0) + ' Mi'"></p>
+            <p class="text-[10px] text-slate-500">Cotação em Tela na B3</p>
+          </div>
+          <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
+            <p class="text-[10px] uppercase font-bold text-slate-400">Dívida da Holding</p>
+            <p class="text-base font-black text-red-400 font-mono mt-0.5" x-text="'R$ ' + formatNum(detalhesValuation ? detalhesValuation.divida_liquida_holding_mi : dividaLiquida) + ' Mi'"></p>
+            <p class="text-[10px] text-slate-500">Debêntures menos Caixa</p>
+          </div>
+          <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
+            <p class="text-[10px] uppercase font-bold text-slate-400">Desconto de Holding</p>
+            <p class="text-base font-black text-indigo-400 font-mono mt-0.5" x-text="(detalhesValuation ? detalhesValuation.desconto_holding_adotado_pct : 20) + '%'"></p>
+            <p class="text-[10px] text-slate-500">Margem Estrutural</p>
+          </div>
+        </div>
+
+        {# Tabela de Participações #}
+        <template x-if="detalhesValuation && detalhesValuation.participacoes && detalhesValuation.participacoes.length > 0">
+          <div class="overflow-x-auto rounded-xl border border-slate-700">
+            <table class="w-full text-xs text-left text-slate-300">
+              <thead class="bg-slate-900 text-slate-400 text-[10px] uppercase">
+                <tr>
+                  <th class="px-3 py-2 font-bold">Investida</th>
+                  <th class="px-3 py-2 font-bold">Ticker</th>
+                  <th class="px-3 py-2 font-bold text-right">Qtd (Mi)</th>
+                  <th class="px-3 py-2 font-bold text-right">P. Mercado</th>
+                  <th class="px-3 py-2 font-bold text-right text-emerald-400">P. Intrínseco</th>
+                  <th class="px-3 py-2 font-bold text-right">Valor Justo (Mi)</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800 bg-slate-900/50">
+                <template x-for="(part, idx) in detalhesValuation.participacoes" :key="idx">
+                  <tr class="hover:bg-slate-800/60 transition-colors">
+                    <td class="px-3 py-2 font-medium text-white" x-text="part.nome"></td>
+                    <td class="px-3 py-2 font-mono text-slate-400" x-text="part.ticker"></td>
+                    <td class="px-3 py-2 font-mono text-right" x-text="formatNum(part.quantidade_acoes_mi)"></td>
+                    <td class="px-3 py-2 font-mono text-right text-slate-400" x-text="formatMoney(part.preco_mercado)"></td>
+                    <td class="px-3 py-2 font-mono text-right font-bold text-emerald-400" x-text="formatMoney(part.preco_justo_intrinseco)"></td>
+                    <td class="px-3 py-2 font-mono text-right font-bold text-white" x-text="'R$ ' + formatNum(part.valor_intrinseco_bruto_mi)"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </template>
+      </div>
+    </template>
+
+    {# ── Painel Especializado: Saúde Suplementar (Regulação ANS) ─────────────── #}
+    <template x-if="modeloAtual === 'saude_ans' || (detalhesValuation && detalhesValuation.modelo_utilizado && detalhesValuation.modelo_utilizado.toLowerCase().includes('saúde'))">
+      <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700 space-y-5">
+        <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+          <div>
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30">
+              Saúde Suplementar
+            </span>
+            <h3 class="text-lg font-bold text-white mt-1">Operadora Regulada: DDM com Margem ANS</h3>
+          </div>
+          <span class="text-xs font-mono text-slate-400">Sinistralidade & Solvência</span>
+        </div>
+
+        {# Grid com métricas de saúde #}
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
+            <p class="text-[10px] uppercase font-bold text-slate-400">Sinistralidade (MLR)</p>
+            <p class="text-lg font-black text-rose-400 font-mono mt-0.5" x-text="(detalhesValuation ? detalhesValuation.sinistralidade_mlr_pct : 0) + '%'"></p>
+            <p class="text-[10px] text-slate-500">Eventos / Contraprestações</p>
+          </div>
+          <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
+            <p class="text-[10px] uppercase font-bold text-slate-400">Receita Líquida</p>
+            <p class="text-lg font-black text-white font-mono mt-0.5" x-text="'R$ ' + formatNum(detalhesValuation ? detalhesValuation.receita_liquida_mi : 0) + ' Mi'"></p>
+            <p class="text-[10px] text-slate-500">Carteira de Beneficiários</p>
+          </div>
+          <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
+            <p class="text-[10px] uppercase font-bold text-slate-400">Retenção Solvência ANS</p>
+            <p class="text-lg font-black text-amber-400 font-mono mt-0.5" x-text="'R$ ' + formatNum(detalhesValuation ? detalhesValuation.retencao_reserva_solvencia_ans_mi : 0) + ' Mi'"></p>
+            <p class="text-[10px] text-slate-500">Capital Regulatório Exigido</p>
+          </div>
+          <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
+            <p class="text-[10px] uppercase font-bold text-slate-400">Lucro Distribuível</p>
+            <p class="text-lg font-black text-emerald-400 font-mono mt-0.5" x-text="'R$ ' + formatNum(detalhesValuation ? detalhesValuation.lucro_distribuivel_mi : 0) + ' Mi'"></p>
+            <p class="text-[10px] text-slate-500">Base para Proventos</p>
+          </div>
+        </div>
+      </div>
+    </template>
 
     {# ── Métricas Previdenciárias de Décio Bazin (quando disponíveis no JSON importado) ── #}
     <template x-if="detalhesValuation && detalhesValuation.metrica_bazin">
