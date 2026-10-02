@@ -1,8 +1,21 @@
 <div x-show="abaAtual === 'calculadora'" x-cloak class="space-y-6">
   {# ── Action bar ───────────────────────────────────────────────────────────
   #}
-  <div class="flex justify-center gap-4">
+  <div class="flex flex-wrap justify-center gap-3">
     <button
+      type="button"
+      @click="modalImportarAberto = true"
+      class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-sm font-bold transition-all border border-indigo-500 shadow-md flex items-center gap-2"
+      title="Importar JSON gerado pela IA (agy)"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+      </svg>
+      <span>Importar JSON</span>
+    </button>
+
+    <button
+      type="button"
       @click="ocultarResultados = !ocultarResultados"
       :class="ocultarResultados ? 'bg-amber-600 text-white border-amber-500' : 'bg-slate-700 text-slate-200 border-slate-600'"
       class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all border shadow-md hover:bg-opacity-80"
@@ -13,6 +26,7 @@
     </button>
 
     <button
+      type="button"
       @click="salvarValuation()"
       :disabled="salvando"
       class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-sm font-bold transition-all border border-emerald-500 shadow-md flex items-center gap-2"
