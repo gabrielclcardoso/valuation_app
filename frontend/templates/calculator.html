@@ -1,6 +1,11 @@
 {% extends "base.html" %}
 {% block head_scripts %}
-<script defer src="/static/calculator.js?v=2.2"></script>
+<script>
+  // Fallbacks globais para garantir imunidade contra cache de navegadores
+  window.modeloAtual = 'dcf_fcff';
+  window.detalhesValuation = null;
+</script>
+<script defer src="/static/calculator.js?v=3.0.0"></script>
 {% endblock %}
 
 {% block content %}
