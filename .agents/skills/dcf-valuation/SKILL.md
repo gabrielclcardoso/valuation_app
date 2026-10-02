@@ -33,17 +33,28 @@ Antes de iniciar qualquer análise, verifique se o modelo FCD (FCFF/WACC) é apl
 ## 📋 As 4 Fases de Execução
 
 ### Fase 1: Coleta Bruta (Isolando Fatos)
+
+> [!WARNING]
+> **REGRA DE ATUALIDADE TEMPORAL (ANTI-DESATUALIZAÇÃO):**
+> * **NUNCA chumbe anos passados nas buscas** (ex: NUNCA pesquise termos fixos como `"DFP 2024"` ou `"4T24"`). Modelos de IA possuem forte viés de ancoragem em anos anteriores.
+> * **Verifique o ano civil corrente:** Sempre identifique o ano atual antes de pesquisar.
+> * **Acesse primeiro a Central de Resultados oficial:**
+>   Faça buscas como `site:ri.<empresa>.com.br "Central de Resultados"` ou `site:cvm.gov.br "<empresa>" "DFP"`.
+> * **Identifique a última DFP fechada e o último ITR trimestral:**
+>   Utilize a DFP do último ano calendário completo publicado (ex: em 2026, use a DFP de 2025). Para **Caixa e Dívida Bruta**, utilize preferencialmente o último balanço trimestral (ITR) disponível para capturar a posição patrimonial mais recente, pois dívidas e caixas sofrem grandes oscilações ao longo do ano.
+> * **Prioridade da pasta `reports/`:** Se o usuário colocar um PDF recente na pasta `reports/`, utilize esse documento como fonte primária da verdade.
+
 1. **Documentos Oficiais (DFP / ITR):**
    * Procure por relatórios oficiais na pasta `reports/` ou PDFs baixados do RI da empresa.
    * Extraia via script ou leitura literal (sem estimativas):
-     * **Caixa e Equivalentes + Aplicações Financeiras**
-     * **Dívida Bruta Total** (Empréstimos de Curto e Longo Prazo, Debêntures, Financiamentos)
-     * **Dívida Líquida** = Dívida Bruta - Caixa *(se Caixa > Dívida, o valor é NEGATIVO)*
-     * **Número Total de Ações / Units emitidas** (em Milhões)
-     * **FCO (Fluxo de Caixa Operacional)**
+     * **Caixa e Equivalentes + Aplicações Financeiras** (posição mais recente disponível).
+     * **Dívida Bruta Total** (Empréstimos de Curto e Longo Prazo, Debêntures, Financiamentos).
+     * **Dívida Líquida** = Dívida Bruta - Caixa *(se Caixa > Dívida, o valor é NEGATIVO)*.
+     * **Número Total de Ações / Units emitidas** (em Milhões).
+     * **FCO (Fluxo de Caixa Operacional)** anual normalizado.
      * **CAPEX** (Adições ao Imobilizado e Intangível). *Atenção: Diferencie CapEx de Manutenção de CapEx de Expansão quando divulgado.*
 
-2. **Parâmetros Macroeconômicos Atuais (Via Busca Web):**
+2. **Parâmetros Macroeconômicos Atuais (Via Busca Web em Tempo Real):**
    * Taxa do **Tesouro IPCA+ longo** (ex: NTN-B 2035 ou 2045) $\to R_{f,\text{real}}$ (geralmente entre 6.0% e 6.8%).
    * **Expectativa de Inflação IPCA** de longo prazo (meta CMN + Focus, tipicamente 3.5% a 4.0%).
    * **Prêmio de Risco de Mercado (ERP)** para o Brasil (Damodaran, tipicamente 5.5% a 6.5%).
@@ -143,3 +154,5 @@ Nunca realize cálculos de WACC ou juros compostos em texto livre. Utilize sempr
    * Se a empresa tiver mais caixa que dívida (ex: WEG, Odontoprev), informe `--divida-liq` com valor negativo (ex: `-1500.0`).
 3. **Moeda e Inflação:**
    * Mantenha WACC e Crescimento na mesma base: ambos **nominais** ou ambos **reais**. O padrão da ferramenta é **Nominal BRL**.
+4. **Atualização da Posição de Dívida Líquida (Último Trimestre / ITR):**
+   * Enquanto os fluxos de caixa (FCO, CapEx, D&A) e receita devem ser analisados em base anual completa (DFP ou LTM 12 meses acumulados), a **Dívida Líquida (Caixa e Dívida Bruta)** deve refletir a foto mais recente possível (do último ITR trimestral publicado), evitando carregar dívidas quitadas ou desatualizadas de exercícios passados.
