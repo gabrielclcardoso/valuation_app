@@ -47,18 +47,19 @@ Antes de iniciar qualquer análise, verifique se o modelo FCD (FCFF/WACC) é apl
 1. **Documentos Oficiais (DFP / ITR):**
    * Procure por relatórios oficiais na pasta `reports/` ou PDFs baixados do RI da empresa.
    * Extraia via script ou leitura literal (sem estimativas):
-     * **Caixa e Equivalentes + Aplicações Financeiras** (posição mais recente disponível).
-     * **Dívida Bruta Total** (Empréstimos de Curto e Longo Prazo, Debêntures, Financiamentos).
+     * **Caixa e Equivalentes + Aplicações Financeiras** (posição do trimestre mais recente disponível).
+     * **Dívida Bruta Total** (Empréstimos de Curto e Longo Prazo, Debêntures, Financiamentos do último trimestre).
      * **Dívida Líquida** = Dívida Bruta - Caixa *(se Caixa > Dívida, o valor é NEGATIVO)*.
-     * **Número Total de Ações / Units emitidas** (em Milhões).
+     * **Número Total de Ações / Units emitidas** (em Milhões): Verifique se houve bonificação recente de ações, desdobramento (split) ou cancelamento de ações em tesouraria após a data da última DFP.
      * **FCO (Fluxo de Caixa Operacional)** anual normalizado.
      * **CAPEX** (Adições ao Imobilizado e Intangível). *Atenção: Diferencie CapEx de Manutenção de CapEx de Expansão quando divulgado.*
 
-2. **Parâmetros Macroeconômicos Atuais (Via Busca Web em Tempo Real):**
+2. **Parâmetros Macroeconômicos e Financeiros Atuais (Tempo Real):**
    * Taxa do **Tesouro IPCA+ longo** (ex: NTN-B 2035 ou 2045) $\to R_{f,\text{real}}$ (geralmente entre 6.0% e 6.8%).
    * **Expectativa de Inflação IPCA** de longo prazo (meta CMN + Focus, tipicamente 3.5% a 4.0%).
-   * **Prêmio de Risco de Mercado (ERP)** para o Brasil (Damodaran, tipicamente 5.5% a 6.5%).
-   * **Beta do Setor / Empresa** (alavancado ou desalavancado).
+   * **Prêmio de Risco de Mercado (ERP)** para o Brasil (Damodaran atualizado, tipicamente 5.5% a 6.5%).
+   * **Beta do Setor / Empresa** ($\beta$) desalavancado e realavancado.
+   * **Custo da Dívida ($K_d$ bruto):** Quase toda dívida de empresas brasileiras é pós-fixada (CDI + spread ou IPCA + spread). Calibre o $K_d$ com a taxa Selic/CDI **vigente no momento da análise**, somada ao spread médio de captação reportado no balanço mais recente da empresa. Não use taxas de juros de anos em que a Selic estava em outro patamar de ciclo.
 
 ---
 
@@ -78,10 +79,18 @@ Nunca realize cálculos de WACC ou juros compostos em texto livre. Utilize sempr
 ---
 
 ### Fase 3: O Futuro (Isolando a Narrativa)
+
+> [!IMPORTANT]
+> **ÂNCORA TEMPORAL DA PROJEÇÃO ($t=0$ e $t=1$):**
+> * **$t=0$ (Ano Base):** É o exercício mais recente já encerrado (última DFP publicada ou LTM).
+> * **$t=1$ (Ano 1 da Projeção):** DEVE ser obrigatoriamente o próximo ano fiscal ainda não encerrado. **NUNCA projete como 'Ano 1' um ano que já passou**.
+>   * *Exemplo:* Se o valuation ocorre em 2026 com base na DFP de 2025, o **Ano 1 é 2026**, o **Ano 2 é 2027**, etc.
+>   * Documente explicitamente na justificativa quais anos civis correspondem aos Anos 1 a 5.
+
 1. **Anos de Projeção:**
-   * Padrão: 5 anos de projeção explícita.
+   * Padrão: 5 anos de projeção explícita ($t=1 \dots t=5$).
 2. **Taxas de Crescimento Anual ($g_1 \dots g_5$):**
-   * Baseie-se no cronograma de CAPEX, novas concessões/linhas operacionais e guidance oficial da empresa.
+   * Baseie-se no cronograma de CAPEX mais recente, novas concessões e revisões tarifárias periódicas definitivas (ex: AGEPAR, ANEEL, ANTT).
    * Crie uma trajetória de desaceleração gradual em direção ao crescimento perpétuo.
 3. **Crescimento Perpétuo ($g_{\text{perp}}$):**
    * Deve ser estritamente menor que o WACC ($g_{\text{perp}} < \text{WACC}$).
@@ -156,3 +165,10 @@ Nunca realize cálculos de WACC ou juros compostos em texto livre. Utilize sempr
    * Mantenha WACC e Crescimento na mesma base: ambos **nominais** ou ambos **reais**. O padrão da ferramenta é **Nominal BRL**.
 4. **Atualização da Posição de Dívida Líquida (Último Trimestre / ITR):**
    * Enquanto os fluxos de caixa (FCO, CapEx, D&A) e receita devem ser analisados em base anual completa (DFP ou LTM 12 meses acumulados), a **Dívida Líquida (Caixa e Dívida Bruta)** deve refletir a foto mais recente possível (do último ITR trimestral publicado), evitando carregar dívidas quitadas ou desatualizadas de exercícios passados.
+5. **Checklist Obrigatório de Recência Pré-Cálculo:**
+   Antes de executar o `calc_dcf.py`, o agente deve verificar se todos os pontos abaixo foram atendidos:
+   * [x] **Data Corrente Identificada:** O ano civil atual foi considerado; nenhuma busca com anos passados fixos foi executada.
+   * [x] **Dívida & Caixa Recentes:** A Dívida Líquida reflete o balanço mais recente publicado (último ITR ou DFP).
+   * [x] **Horizonte de Projeção ($t=1$):** O Ano 1 é um ano futuro/vigente; nenhum ano que já se encerrou foi projetado.
+   * [x] **Custo da Dívida ($K_d$):** Foi calibrado com a taxa Selic/CDI vigente no mercado atual.
+   * [x] **Base Acionária Atual:** Foi verificado se ocorreram desdobramentos, bonificações ou cancelamento de ações recentes.
