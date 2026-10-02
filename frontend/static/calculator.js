@@ -20,6 +20,33 @@ document.addEventListener("alpine:init", () => {
     margemSeguranca: 20,
     ocultarResultados: false,
     precosTempoReal: {},
+    modalImportarAberto: false,
+    jsonParaImportar: "",
+
+    importarJSON() {
+      try {
+        const data = JSON.parse(this.jsonParaImportar);
+        if (data.ticker) {
+          const preco = data.precoAtual || (this.tickersList[0] ? this.tickersList[0].precoAtual : 0);
+          this.tickersList = [{ ticker: data.ticker, precoAtual: preco }];
+        }
+        if (data.fclf !== undefined) this.fclf = parseFloat(data.fclf);
+        if (data.anosProjecao !== undefined) this.anosProjecao = parseInt(data.anosProjecao);
+        if (Array.isArray(data.taxasCrescimento)) this.taxasCrescimento = data.taxasCrescimento.map(Number);
+        if (data.wacc !== undefined) this.wacc = parseFloat(data.wacc);
+        if (data.crescPerp !== undefined) this.crescPerp = parseFloat(data.crescPerp);
+        if (data.dividaLiquida !== undefined) this.dividaLiquida = parseFloat(data.dividaLiquida);
+        if (data.numAcoes !== undefined) this.numAcoes = parseFloat(data.numAcoes);
+        if (data.margemSeguranca !== undefined) this.margemSeguranca = parseFloat(data.margemSeguranca);
+        this.modalImportarAberto = false;
+        this.jsonParaImportar = "";
+        if (data.ticker) {
+          this.buscarPrecoNaBrapi(0);
+        }
+      } catch (err) {
+        alert("Erro ao ler JSON: " + err.message);
+      }
+    },
 
     adicionarTicker() {
       this.tickersList.push({ ticker: "", precoAtual: 0 });

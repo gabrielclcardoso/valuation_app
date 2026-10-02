@@ -1,0 +1,145 @@
+---
+name: dcf-valuation
+description: Analyzes Brazilian public companies (B3) using Discounted Free Cash Flow to Firm (FCFF / FCLF), following a strict 4-phase blind methodology, and outputs a ready-to-use JSON file for the valuation app.
+---
+
+# Valuation por Fluxo de Caixa Descontado (DCF / FCD) para Ações Brasileiras (B3)
+
+Esta skill guia o agente Antigravity na execução completa do processo de Valuation por FCD (9 Passos) para empresas listadas na B3, garantindo rigor contábil, cálculos exatos via Python, proteção contra viés de ancoragem e exportação padronizada em JSON.
+
+---
+
+## 🛑 Fase 0: Triagem de Elegibilidade do Setor
+
+Antes de iniciar qualquer análise, verifique se o modelo FCD (FCFF/WACC) é aplicável:
+
+* **NÃO APLICÁVEL (Rejeitar ou alertar o usuário):**
+  * **Setor Financeiro:** Bancos (ITUB, BBDC, BBAS, SANB), Seguradoras/Planos de Saúde (BBSE, CXSE, Bradesco Saúde, PSSA), Corretoras/B3 (B3SA3). *Motivo: A dívida/depósitos/reservas técnicas é a matéria-prima do negócio. Use DDM (Gordon) ou P/VP.*
+  * **Eventos Binários:** Biotecnologia pré-clínica, mineradoras/petroleiras juniores em sondagem. *Use Opções Reais.*
+  * **Empresas Pré-Lucro / Startups de Queima Acelerada:** SaaS ou e-commerce com FCLF negativo crônico. *Use Múltiplos EV/Sales.*
+  * **Holdings Puras:** Itaúsa (ITSA4). *Use Soma das Partes (SOTP).*
+  * **Recuperação Judicial Severa:** *Use Liquidação / Net Asset Value.*
+
+* **IDEAL PARA FCD:**
+  * Utilidades Públicas (Alupar, Sanepar, CPFL, Engie, Taesa, Sabesp).
+  * Telecomunicações (TIM, Telefônica Brasil/Vivo).
+  * Indústria e Bens de Capital (WEG, Tupy, Iochpe-Maxion).
+  * Logística e Infraestrutura (CCR, Ecorodovias, Santos Brasil, Rumo).
+  * Saúde Operacional / Hospitais / Diagnósticos (Rede D'Or, Fleury, Mater Dei).
+  * Varejo maduro e Consumo (M. Dias Branco, Ambev, Lojas Renner).
+
+---
+
+## 📋 As 4 Fases de Execução
+
+### Fase 1: Coleta Bruta (Isolando Fatos)
+1. **Documentos Oficiais (DFP / ITR):**
+   * Procure por relatórios oficiais na pasta `reports/` ou PDFs baixados do RI da empresa.
+   * Extraia via script ou leitura literal (sem estimativas):
+     * **Caixa e Equivalentes + Aplicações Financeiras**
+     * **Dívida Bruta Total** (Empréstimos de Curto e Longo Prazo, Debêntures, Financiamentos)
+     * **Dívida Líquida** = Dívida Bruta - Caixa *(se Caixa > Dívida, o valor é NEGATIVO)*
+     * **Número Total de Ações / Units emitidas** (em Milhões)
+     * **FCO (Fluxo de Caixa Operacional)**
+     * **CAPEX** (Adições ao Imobilizado e Intangível). *Atenção: Diferencie CapEx de Manutenção de CapEx de Expansão quando divulgado.*
+
+2. **Parâmetros Macroeconômicos Atuais (Via Busca Web):**
+   * Taxa do **Tesouro IPCA+ longo** (ex: NTN-B 2035 ou 2045) $\to R_{f,\text{real}}$ (geralmente entre 6.0% e 6.8%).
+   * **Expectativa de Inflação IPCA** de longo prazo (meta CMN + Focus, tipicamente 3.5% a 4.0%).
+   * **Prêmio de Risco de Mercado (ERP)** para o Brasil (Damodaran, tipicamente 5.5% a 6.5%).
+   * **Beta do Setor / Empresa** (alavancado ou desalavancado).
+
+---
+
+### Fase 2: O Presente e o Risco (Isolando a Matemática)
+Nunca realize cálculos de WACC ou juros compostos em texto livre. Utilize sempre o script de cálculo embutido.
+
+1. **FCLF Inicial ($FCFF_0$):**
+   $$\text{FCLF}_0 = \text{FCO} - \text{CAPEX}_{\text{manutenção}}$$
+   *Se o FCLF do último ano foi distorcido por variação pontual de capital de giro, normalize pela média dos últimos 3 anos.*
+
+2. **Estrutura de Capital e WACC (em termos nominais BRL):**
+   * $R_{f,\text{nominal}} = (1 + R_{f,\text{real}}) \times (1 + \text{IPCA}) - 1$
+   * $K_e = R_{f,\text{nominal}} + \beta \times \text{ERP}$
+   * $K_d(\text{líquido}) = K_d \times (1 - T)$, onde $T \approx 34\%$ (alíquota efetiva).
+   * $\text{WACC} = \left(\frac{E}{D+E}\right) K_e + \left(\frac{D}{D+E}\right) K_d(\text{líquido})$
+
+---
+
+### Fase 3: O Futuro (Isolando a Narrativa)
+1. **Anos de Projeção:**
+   * Padrão: 5 anos de projeção explícita.
+2. **Taxas de Crescimento Anual ($g_1 \dots g_5$):**
+   * Baseie-se no cronograma de CAPEX, novas concessões/linhas operacionais e guidance oficial da empresa.
+   * Crie uma trajetória de desaceleração gradual em direção ao crescimento perpétuo.
+3. **Crescimento Perpétuo ($g_{\text{perp}}$):**
+   * Deve ser estritamente menor que o WACC ($g_{\text{perp}} < \text{WACC}$).
+   * No Brasil (nominal), costuma ficar entre **2.5% e 4.0%** (alinhado ao PIB de longo prazo + inflação).
+
+---
+
+### Fase 4: O Veredito Cego (Blind Valuation) e Geração do JSON
+
+> [!IMPORTANT]
+> **REGRA DE OURO (ANTI-ANCORAGEM):**
+> O agente NÃO deve consultar a cotação de mercado da ação antes de concluir o cálculo do Preço Justo e Preço Teto. O valuation deve ser 100% agnóstico ao preço negociado em bolsa.
+
+1. **Executar o Script de Cálculo:**
+   Execute o script `.agents/skills/dcf-valuation/scripts/calc_dcf.py` passando os parâmetros coletados:
+   ```bash
+   python3 .agents/skills/dcf-valuation/scripts/calc_dcf.py \
+     --ticker <TICKER> \
+     --fclf <VALOR_MI> \
+     --taxas <G1> <G2> <G3> <G4> <G5> \
+     --wacc <WACC_PCT> \
+     --cresc-perp <G_PERP_PCT> \
+     --divida-liq <DIVIDA_LIQ_MI> \
+     --num-acoes <ACOES_MI> \
+     --margem <MARGEM_SEGURANCA_PCT> \
+     --empresa "<NOME_EMPRESA>" \
+     --setor "<SETOR>" \
+     --justificativa "<RESUMO_DAS_PREMISSAS>"
+   ```
+
+2. **Formato do JSON Gerado:**
+   O script salvará o arquivo em `valuations/<TICKER>_valuation.json`, pronto para ser utilizado ou importado na aplicação:
+   ```json
+   {
+     "ticker": "SAPR11",
+     "fclf": 1850.5,
+     "anosProjecao": 5,
+     "taxasCrescimento": [6.0, 5.5, 5.0, 4.5, 4.0],
+     "wacc": 11.8,
+     "crescPerp": 3.0,
+     "dividaLiquida": 4500.0,
+     "numAcoes": 302.5,
+     "margemSeguranca": 20.0,
+     "precoJusto": 63.12,
+     "precoTeto": 50.50,
+     "detalhes": {
+       "soma_pv_fluxos": 7770.47,
+       "enterprise_value": 23595.04,
+       "equity_value": 19095.04,
+       "projecoes": [ ... ],
+       "metadata": { ... }
+     }
+   }
+   ```
+
+3. **Veredito Final:**
+   Somente após gerar o JSON, consulte a cotação atual (via endpoint `/api/quote/{ticker}` ou busca) para informar ao usuário:
+   * **COMPRAR (Abaixo do Teto):** Cotação $\le$ Preço Teto.
+   * **COMPRAR (Sem Margem):** Preço Teto $<$ Cotação $<$ Preço Justo.
+   * **NÃO COMPRAR (Cara):** Cotação $\ge$ Preço Justo.
+
+---
+
+## 🎯 Regras Específicas do Mercado Brasileiro (B3)
+
+1. **Ações do Tipo "UNIT" (ex: ALUP11, SAPR11, KLBN11, TAEE11):**
+   * Units são pacotes de ações (ex: SAPR11 = 1 ON + 4 PN).
+   * Certifique-se de que o campo `numAcoes` reflita o **total de Units equivalentes**, e não a soma bruta de ONs e PNs individuais, para que o Preço Justo coincida diretamente com a cotação da Unit negociada.
+2. **Caixa Líquido (Dívida Líquida Negativa):**
+   * Se a empresa tiver mais caixa que dívida (ex: WEG, Odontoprev), informe `--divida-liq` com valor negativo (ex: `-1500.0`).
+3. **Moeda e Inflação:**
+   * Mantenha WACC e Crescimento na mesma base: ambos **nominais** ou ambos **reais**. O padrão da ferramenta é **Nominal BRL**.
