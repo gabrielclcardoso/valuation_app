@@ -45,9 +45,14 @@ def main():
     dcf_p.add_argument("--cresc-perp", type=float, required=True)
     dcf_p.add_argument("--divida-liq", type=float, required=True)
     dcf_p.add_argument("--outros-passivos", type=float, default=0.0)
+    dcf_p.add_argument("--passivos-contingentes", type=float, default=0.0)
+    dcf_p.add_argument("--passivos-regulatorios", type=float, default=None)
+    dcf_p.add_argument("--aliquota-ir", type=float, default=34.0)
+    dcf_p.add_argument("--quase-divida-dedutivel", action="store_true", default=False)
     dcf_p.add_argument("--num-acoes", type=float, required=True)
     dcf_p.add_argument("--margem", type=float, default=20.0)
     dcf_p.add_argument("--dpa", type=float, default=0.0)
+    dcf_p.add_argument("--pct-jcp", type=float, default=0.0)
     dcf_p.add_argument("--empresa", default="")
     dcf_p.add_argument("--setor", default="")
     dcf_p.add_argument("--justificativa", default="")
@@ -65,6 +70,7 @@ def main():
     fin_p.add_argument("--taxas", type=float, nargs="*", default=None)
     fin_p.add_argument("--num-acoes", type=float, required=True)
     fin_p.add_argument("--margem", type=float, default=20.0)
+    fin_p.add_argument("--pct-jcp", type=float, default=0.0)
     fin_p.add_argument("--tipo", choices=["banco", "seguradora"], default="banco")
     fin_p.add_argument("--empresa", default="")
     fin_p.add_argument("--setor", default="")
@@ -79,7 +85,9 @@ def main():
     hld_p.add_argument("--desconto", type=float, default=20.0)
     hld_p.add_argument("--margem", type=float, default=20.0)
     hld_p.add_argument("--dpa", type=float, default=None)
-    hld_p.add_argument("--despesas-adm", type=float, default=150.0)
+    hld_p.add_argument("--despesas-adm", type=float, default=0.0)
+    hld_p.add_argument("--ke-holding", type=float, default=12.0)
+    hld_p.add_argument("--pct-jcp", type=float, default=0.0)
     hld_p.add_argument("--participacoes-json")
     hld_p.add_argument("--itub-acoes", type=float, default=0.0)
     hld_p.add_argument("--itub-preco-mercado", type=float, default=0.0)
@@ -107,7 +115,9 @@ def main():
     sau_p.add_argument("--cresc-perp", type=float, required=True)
     sau_p.add_argument("--taxas", type=float, nargs="*", default=None)
     sau_p.add_argument("--num-acoes", type=float, required=True)
+    sau_p.add_argument("--divida-liq", type=float, default=0.0)
     sau_p.add_argument("--margem", type=float, default=20.0)
+    sau_p.add_argument("--pct-jcp", type=float, default=0.0)
     sau_p.add_argument("--empresa", default="")
     sau_p.add_argument("--setor", default="Saúde Suplementar")
     sau_p.add_argument("--justificativa", default="")
@@ -141,8 +151,13 @@ def main():
             divida_liquida=args.divida_liq,
             num_acoes=args.num_acoes,
             outros_passivos=args.outros_passivos,
+            passivos_contingentes=args.passivos_contingentes,
+            passivos_regulatorios=args.passivos_regulatorios,
+            aliquota_ir_csll=args.aliquota_ir,
+            quase_divida_dedutivel=args.quase_divida_dedutivel,
             margem_seguranca=args.margem,
             dpa_projetado=args.dpa,
+            pct_jcp=args.pct_jcp,
             empresa=args.empresa,
             setor=args.setor,
             metadata=meta,
@@ -159,6 +174,7 @@ def main():
             taxas_crescimento_dpa=args.taxas,
             num_acoes=args.num_acoes,
             margem_seguranca=args.margem,
+            pct_jcp=args.pct_jcp,
             tipo=args.tipo,
             empresa=args.empresa,
             setor=args.setor,
@@ -178,7 +194,7 @@ def main():
                     "ticker": "ITUB4",
                     "quantidade_acoes": args.itub_acoes,
                     "preco_mercado": args.itub_preco_mercado,
-                    "preco_justo_intrinseco": args.itub_preco_justo if args.itub_preco_justo > 0 else args.itub_preco_mercado,
+                    "preco_justo_intrinseco": args.itub_preco_justo if args.itub_preco_justo > 0 else None,
                     "dpa_esperado": args.itub_dpa,
                 })
             if args.outros_ativos_mercado > 0 or args.outros_ativos_justo > 0:
@@ -187,7 +203,7 @@ def main():
                     "ticker": "OUTRAS",
                     "quantidade_acoes": 1.0,
                     "preco_mercado": args.outros_ativos_mercado,
-                    "preco_justo_intrinseco": args.outros_ativos_justo if args.outros_ativos_justo > 0 else args.outros_ativos_mercado,
+                    "preco_justo_intrinseco": args.outros_ativos_justo if args.outros_ativos_justo > 0 else None,
                     "dpa_esperado": args.outros_ativos_dpa,
                 })
         resultado = calculate_sotp_holding(
@@ -199,6 +215,8 @@ def main():
             margem_seguranca=args.margem,
             dpa_projetado_holding=args.dpa,
             despesas_adm_holding=args.despesas_adm,
+            ke_holding=args.ke_holding,
+            pct_jcp=args.pct_jcp,
             empresa=args.empresa,
             setor=args.setor,
             metadata=meta,
@@ -216,8 +234,10 @@ def main():
             ke=args.ke,
             cresc_perp=args.cresc_perp,
             num_acoes=args.num_acoes,
+            divida_liquida=args.divida_liq,
             margem_seguranca=args.margem,
             taxas_crescimento_receita=args.taxas,
+            pct_jcp=args.pct_jcp,
             empresa=args.empresa,
             setor=args.setor,
             metadata=meta,

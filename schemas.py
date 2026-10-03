@@ -36,6 +36,8 @@ class ValuationCreate(BaseModel):
     margem_seguranca: float
     preco_justo: float
     preco_teto: float
+    modelo: str = "dcf_fcff"
+    detalhes: dict | str | None = None
 
 
 class ValuationResponse(BaseModel):
@@ -52,6 +54,8 @@ class ValuationResponse(BaseModel):
     margem_seguranca: float
     preco_justo: float
     preco_teto: float
+    modelo: str = "dcf_fcff"
+    detalhes: dict | str | None = None
     criado_em: datetime
 
     class Config:

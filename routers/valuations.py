@@ -20,6 +20,11 @@ def save_valuation(
 ):
     # Converte a lista do front em String para o Banco de Dados
     taxas_string = json.dumps(valuation.taxas_crescimento)
+    detalhes_string = (
+        json.dumps(valuation.detalhes)
+        if isinstance(valuation.detalhes, (dict, list))
+        else (valuation.detalhes if isinstance(valuation.detalhes, str) else None)
+    )
 
     novo_valuation = ValuationDB(
         usuario_id=user_id,
@@ -35,13 +40,23 @@ def save_valuation(
         margem_seguranca=valuation.margem_seguranca,
         preco_justo=valuation.preco_justo,
         preco_teto=valuation.preco_teto,
+        modelo=valuation.modelo or "dcf_fcff",
+        detalhes=detalhes_string,
     )
     db.add(novo_valuation)
     db.commit()
     db.refresh(novo_valuation)
 
     resposta = novo_valuation.__dict__.copy()
+    resposta.pop("_sa_instance_state", None)
     resposta["taxas_crescimento"] = json.loads(novo_valuation.taxas_crescimento)
+    if novo_valuation.detalhes:
+        try:
+            resposta["detalhes"] = json.loads(novo_valuation.detalhes)
+        except Exception:
+            resposta["detalhes"] = novo_valuation.detalhes
+    else:
+        resposta["detalhes"] = None
 
     return resposta
 
@@ -55,7 +70,16 @@ def list_valuations(
     resultado = []
     for item in history:
         dados = item.__dict__.copy()
+        dados.pop("_sa_instance_state", None)
         dados["taxas_crescimento"] = json.loads(item.taxas_crescimento)
+        dados["modelo"] = item.modelo or "dcf_fcff"
+        if item.detalhes:
+            try:
+                dados["detalhes"] = json.loads(item.detalhes)
+            except Exception:
+                dados["detalhes"] = item.detalhes
+        else:
+            dados["detalhes"] = None
         resultado.append(dados)
 
     return resultado

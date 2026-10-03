@@ -2,10 +2,11 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
-from database import engine, Base
+from database import engine, Base, ensure_db_schema
 from routers import auth, valuations, quotes, pages
 
 Base.metadata.create_all(bind=engine)
+ensure_db_schema()
 
 app = FastAPI(title="API de Valuation FCD - 9 Passos")
 

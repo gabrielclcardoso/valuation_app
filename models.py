@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, Float, String, ForeignKey, DateTime
-from datetime import datetime
+from datetime import datetime, timezone
 from database import Base
 
 
@@ -9,7 +9,7 @@ class UserDB(Base):
     nome = Column(String, nullable=False)
     username = Column(String, unique=True, index=True, nullable=False)
     senha_hash = Column(String, nullable=False)
-    criado_em = Column(DateTime, default=datetime.utcnow)
+    criado_em = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class ValuationDB(Base):
@@ -30,4 +30,6 @@ class ValuationDB(Base):
     margem_seguranca = Column(Float, nullable=False)
     preco_justo = Column(Float, nullable=False)
     preco_teto = Column(Float, nullable=False)
-    criado_em = Column(DateTime, default=datetime.utcnow)
+    modelo = Column(String, default="dcf_fcff", nullable=False)
+    detalhes = Column(String, nullable=True)
+    criado_em = Column(DateTime, default=lambda: datetime.now(timezone.utc))

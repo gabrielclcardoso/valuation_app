@@ -53,8 +53,13 @@ def calculate_dcf(
     divida_liquida: float,
     num_acoes: float,
     outros_passivos: float = 0.0,
+    passivos_contingentes: float = 0.0,
+    passivos_regulatorios: Optional[float] = None,
+    aliquota_ir_csll: float = 34.0,
+    quase_divida_dedutivel: bool = False,
     margem_seguranca: float = 20.0,
     dpa_projetado: float = 0.0,
+    pct_jcp: float = 0.0,
     empresa: str = "",
     setor: str = "",
     metadata: Optional[Dict[str, Any]] = None,
@@ -69,9 +74,14 @@ def calculate_dcf(
         cresc_perp: Taxa de crescimento na perpetuidade (% a.a.)
         divida_liquida: Dívida Financeira Líquida do último ITR/DFP (R$ Milhões)
         num_acoes: Total de ações ou Units equivalentes (Milhões)
-        outros_passivos: Quase-dívidas (passivos regulatórios, déficits atuariais, contingências)
+        outros_passivos: Quase-dívidas consolidadas em R$ Milhões
+        passivos_contingentes: Passivos contingentes e atuariais dedutíveis para IRPJ/CSLL (R$ Mi)
+        passivos_regulatorios: Passivos regulatórios (R$ Mi). Se negativo, tratado como ativo regulatório.
+        aliquota_ir_csll: Alíquota de IRPJ/CSLL para cálculo do benefício fiscal (padrão 34.0%)
+        quase_divida_dedutivel: Se True, aplica benefício fiscal de 34% a 'outros_passivos'
         margem_seguranca: Margem de segurança aplicada ao Preço Justo (%)
         dpa_projetado: DPA sustentável esperado para métrica Bazin (R$)
+        pct_jcp: Percentual dos proventos pagos sob a forma de JCP bruto (%)
         empresa: Nome corporativo da empresa
         setor: Setor de atuação
         metadata: Dicionário adicional com memórias de cálculo e justificativas
@@ -113,23 +123,45 @@ def calculate_dcf(
     # 3. Enterprise Value
     enterprise_value = soma_pv + vp_terminal
 
-    # 4. Estrutura de Dívida e Quase-Dívidas
+    # 4. Estrutura de Dívida e Quase-Dívidas com Benefício Fiscal
     divida_fin_liq = float(divida_liquida)
-    outros_pass = float(outros_passivos)
-    divida_total_ajustada = divida_fin_liq + outros_pass
+    tax_rate = float(aliquota_ir_csll) / 100.0
+
+    # Segregação e tratamento tributário:
+    # Passivos regulatórios: restituições tarifárias (não geram benefício fiscal direto de IR)
+    if passivos_regulatorios is not None:
+        regulatorio = float(passivos_regulatorios)
+    else:
+        regulatorio = float(outros_passivos) if not quase_divida_dedutivel else 0.0
+
+    # Passivos contingentes e atuariais (previdência/processos cíveis/trabalhistas/tributários dedutíveis)
+    if passivos_contingentes > 0:
+        contingentes_bruto = float(passivos_contingentes)
+    elif quase_divida_dedutivel and outros_passivos != 0.0:
+        contingentes_bruto = float(outros_passivos)
+    else:
+        contingentes_bruto = 0.0
+
+    # Quase-dívidas contingentes deduzidas líquidas de impostos (34% IRPJ/CSLL)
+    contingentes_liquidos = contingentes_bruto * (1.0 - tax_rate)
+    beneficio_fiscal_quase_divida = contingentes_bruto - contingentes_liquidos
+
+    # Passivo regulatório negativo é tratado como ATIVO regulatório (adiciona ao valor ou reduz dívida)
+    divida_total_ajustada = divida_fin_liq + contingentes_liquidos + regulatorio
+    quase_dividas_total_liquidas = contingentes_liquidos + regulatorio
 
     # Cenário Base: Apenas dívida financeira líquida
     equity_value_base = enterprise_value - divida_fin_liq
     preco_justo_base = max(0.0, equity_value_base / float(num_acoes))
     preco_teto_base = preco_justo_base * (1.0 - (float(margem_seguranca) / 100.0))
 
-    # Cenário Ajustado: Deduzindo passivos regulatórios, contingências e déficits atuariais
+    # Cenário Ajustado: Deduzindo passivos regulatórios, contingências e déficits atuariais líquidos
     equity_value_ajustado = enterprise_value - divida_total_ajustada
     preco_justo_ajustado = max(0.0, equity_value_ajustado / float(num_acoes))
     preco_teto_ajustado = preco_justo_ajustado * (1.0 - (float(margem_seguranca) / 100.0))
 
-    # Se outros passivos foram informados, o preço conservador oficial adotado é o ajustado
-    if outros_pass > 0:
+    # Se quase-dívidas/passivos regulatórios foram informados, o preço oficial adotado é o ajustado
+    if contingentes_bruto > 0 or regulatorio != 0.0 or outros_passivos != 0.0:
         preco_justo_final = preco_justo_ajustado
         preco_teto_final = preco_teto_ajustado
         equity_value_final = equity_value_ajustado
@@ -141,7 +173,11 @@ def calculate_dcf(
         divida_final = divida_fin_liq
 
     # Métrica Bazin centralizada
-    metrica_bazin = calculate_bazin(dpa=dpa_projetado, preco_teto_modelo=preco_teto_final)
+    metrica_bazin = calculate_bazin(
+        dpa=dpa_projetado,
+        preco_teto_modelo=preco_teto_final,
+        pct_jcp=pct_jcp,
+    )
 
     meta = metadata.copy() if metadata else {}
     if empresa:
@@ -171,7 +207,12 @@ def calculate_dcf(
             "enterprise_value": round(enterprise_value, 2),
             "equity_value": round(equity_value_final, 2),
             "divida_financeira_liquida": round(divida_fin_liq, 2),
-            "outros_passivos_deduzidos": round(outros_pass, 2),
+            "passivos_contingentes_bruto": round(contingentes_bruto, 2),
+            "passivos_contingentes_liquidos": round(contingentes_liquidos, 2),
+            "beneficio_fiscal_quase_divida_mi": round(beneficio_fiscal_quase_divida, 2),
+            "passivos_regulatorios": round(regulatorio, 2),
+            "ativo_regulatorio_mi": round(abs(regulatorio), 2) if regulatorio < 0 else 0.0,
+            "outros_passivos_deduzidos": round(quase_dividas_total_liquidas, 2),
             "divida_total_ajustada": round(divida_total_ajustada, 2),
             "cenarios": {
                 "cenario_base": {
@@ -181,7 +222,7 @@ def calculate_dcf(
                     "preco_teto": round(preco_teto_base, 2),
                 },
                 "cenario_ajustado": {
-                    "descricao": "DCF Ajustado deduzindo passivos regulatórios, contingências e quase-dívidas",
+                    "descricao": "DCF Ajustado deduzindo passivos regulatórios e quase-dívidas líquidas de impostos",
                     "equity_value": round(equity_value_ajustado, 2),
                     "preco_justo": round(preco_justo_ajustado, 2),
                     "preco_teto": round(preco_teto_ajustado, 2),

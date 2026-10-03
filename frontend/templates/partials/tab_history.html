@@ -75,10 +75,26 @@
                   class="px-4 py-4 text-slate-400"
                   x-text="formatData(item.criado_em)"
                 ></td>
-                <td
-                  class="px-4 py-4 font-bold text-white uppercase"
-                  x-text="item.ticker"
-                ></td>
+                <td class="px-4 py-4 font-bold text-white uppercase">
+                  <div class="flex items-center gap-1.5">
+                    <span x-text="item.ticker"></span>
+                    <span
+                      class="text-[9px] px-1.5 py-0.5 rounded font-mono font-semibold"
+                      :class="
+                        item.modelo === 'gordon_ddm' ? 'bg-emerald-900/40 text-emerald-400 border border-emerald-700/40' :
+                        item.modelo === 'sotp_holding' ? 'bg-indigo-900/40 text-indigo-400 border border-indigo-700/40' :
+                        item.modelo === 'saude_ans' ? 'bg-rose-900/40 text-rose-400 border border-rose-700/40' :
+                        'bg-slate-800 text-slate-400 border border-slate-700'
+                      "
+                      x-text="
+                        item.modelo === 'gordon_ddm' ? 'DDM' :
+                        item.modelo === 'sotp_holding' ? 'SOTP' :
+                        item.modelo === 'saude_ans' ? 'ANS' :
+                        'DCF'
+                      "
+                    ></span>
+                  </div>
+                </td>
 
                 <td class="px-4 py-4 font-mono text-slate-200">
                   <div class="flex items-center gap-1.5">

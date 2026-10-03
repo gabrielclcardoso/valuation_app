@@ -198,7 +198,7 @@
     </template>
 
     {# ── Painel Especializado: Bancos e Seguradoras (Gordon & DDM) ─────────── #}
-    <template x-if="modeloAtual === 'gordon_ddm' || (detalhesValuation && detalhesValuation.modelo_utilizado && detalhesValuation.modelo_utilizado.toLowerCase().includes('gordon'))">
+    <template x-if="modeloAtual === 'gordon_ddm'">
       <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700 space-y-5">
         <div class="flex items-center justify-between border-b border-slate-700 pb-3">
           <div>
@@ -214,12 +214,12 @@
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
             <p class="text-[10px] uppercase font-bold text-slate-400">VPA</p>
-            <p class="text-lg font-black text-white font-mono mt-0.5" x-text="formatMoney(detalhesValuation ? detalhesValuation.vpa : 0)"></p>
+            <p class="text-lg font-black text-white font-mono mt-0.5" x-text="formatMoney(vpa)"></p>
             <p class="text-[10px] text-slate-500">Patrimônio por Ação</p>
           </div>
           <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
             <p class="text-[10px] uppercase font-bold text-slate-400">ROE Adotado</p>
-            <p class="text-lg font-black text-emerald-400 font-mono mt-0.5" x-text="(detalhesValuation ? detalhesValuation.roe_adotado_pct : 0) + '%'"></p>
+            <p class="text-lg font-black text-emerald-400 font-mono mt-0.5" x-text="roe + '%'"></p>
             <p class="text-[10px] text-slate-500">Rentabilidade sobre PL</p>
           </div>
           <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
@@ -229,7 +229,7 @@
           </div>
           <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
             <p class="text-[10px] uppercase font-bold text-slate-400">P/VP Justo Teórico</p>
-            <p class="text-lg font-black text-indigo-400 font-mono mt-0.5" x-text="(detalhesValuation ? detalhesValuation.p_vp_justo_gordon : 0) + 'x'"></p>
+            <p class="text-lg font-black text-indigo-400 font-mono mt-0.5" x-text="(resultados.pVpJusto ? resultados.pVpJusto.toFixed(3) : '0.000') + 'x'"></p>
             <p class="text-[10px] text-slate-500">(ROE - g) / (Ke - g)</p>
           </div>
         </div>
@@ -245,7 +245,7 @@
     </template>
 
     {# ── Painel Especializado: Holdings (SOTP / Soma das Partes) ─────────────── #}
-    <template x-if="modeloAtual === 'sotp_holding' || (detalhesValuation && detalhesValuation.modelo_utilizado && detalhesValuation.modelo_utilizado.toLowerCase().includes('sotp'))">
+    <template x-if="modeloAtual === 'sotp_holding'">
       <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700 space-y-5">
         <div class="flex items-center justify-between border-b border-slate-700 pb-3">
           <div>
@@ -261,28 +261,28 @@
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
             <p class="text-[10px] uppercase font-bold text-slate-400">NAV Intrínseco Bruto</p>
-            <p class="text-base font-black text-emerald-400 font-mono mt-0.5" x-text="'R$ ' + formatNum(detalhesValuation ? detalhesValuation.total_intrinseco_bruto_mi : 0) + ' Mi'"></p>
+            <p class="text-base font-black text-emerald-400 font-mono mt-0.5" x-text="'R$ ' + formatNum(resultados.navIntrinsecoBruto) + ' Mi'"></p>
             <p class="text-[10px] text-slate-500">Valor Justo das Investidas</p>
           </div>
           <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
             <p class="text-[10px] uppercase font-bold text-slate-400">NAV Mercado Bruto</p>
-            <p class="text-base font-black text-slate-300 font-mono mt-0.5" x-text="'R$ ' + formatNum(detalhesValuation ? detalhesValuation.total_mercado_bruto_mi : 0) + ' Mi'"></p>
+            <p class="text-base font-black text-slate-300 font-mono mt-0.5" x-text="'R$ ' + formatNum(resultados.navMercadoBruto) + ' Mi'"></p>
             <p class="text-[10px] text-slate-500">Cotação em Tela na B3</p>
           </div>
           <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
             <p class="text-[10px] uppercase font-bold text-slate-400">Dívida da Holding</p>
-            <p class="text-base font-black text-red-400 font-mono mt-0.5" x-text="'R$ ' + formatNum(detalhesValuation ? detalhesValuation.divida_liquida_holding_mi : dividaLiquida) + ' Mi'"></p>
+            <p class="text-base font-black text-red-400 font-mono mt-0.5" x-text="'R$ ' + formatNum(dividaLiquida) + ' Mi'"></p>
             <p class="text-[10px] text-slate-500">Debêntures menos Caixa</p>
           </div>
           <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
             <p class="text-[10px] uppercase font-bold text-slate-400">Desconto de Holding</p>
-            <p class="text-base font-black text-indigo-400 font-mono mt-0.5" x-text="(detalhesValuation ? detalhesValuation.desconto_holding_adotado_pct : 20) + '%'"></p>
+            <p class="text-base font-black text-indigo-400 font-mono mt-0.5" x-text="descontoHolding + '%'"></p>
             <p class="text-[10px] text-slate-500">Margem Estrutural</p>
           </div>
         </div>
 
-        {# Tabela de Participações #}
-        <template x-if="detalhesValuation && detalhesValuation.participacoes && detalhesValuation.participacoes.length > 0">
+        {# Tabela de Participações Reativa #}
+        <template x-if="participacoes && participacoes.length > 0">
           <div class="overflow-x-auto rounded-xl border border-slate-700">
             <table class="w-full text-xs text-left text-slate-300">
               <thead class="bg-slate-900 text-slate-400 text-[10px] uppercase">
@@ -296,14 +296,14 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-800 bg-slate-900/50">
-                <template x-for="(part, idx) in detalhesValuation.participacoes" :key="idx">
+                <template x-for="(part, idx) in participacoes" :key="idx">
                   <tr class="hover:bg-slate-800/60 transition-colors">
                     <td class="px-3 py-2 font-medium text-white" x-text="part.nome"></td>
                     <td class="px-3 py-2 font-mono text-slate-400" x-text="part.ticker"></td>
-                    <td class="px-3 py-2 font-mono text-right" x-text="formatNum(part.quantidade_acoes_mi)"></td>
+                    <td class="px-3 py-2 font-mono text-right" x-text="formatNum(part.quantidade_acoes_mi || part.quantidade_acoes)"></td>
                     <td class="px-3 py-2 font-mono text-right text-slate-400" x-text="formatMoney(part.preco_mercado)"></td>
-                    <td class="px-3 py-2 font-mono text-right font-bold text-emerald-400" x-text="formatMoney(part.preco_justo_intrinseco)"></td>
-                    <td class="px-3 py-2 font-mono text-right font-bold text-white" x-text="'R$ ' + formatNum(part.valor_intrinseco_bruto_mi)"></td>
+                    <td class="px-3 py-2 font-mono text-right font-bold text-emerald-400" x-text="formatMoney(part.preco_justo_intrinseco || part.preco_mercado)"></td>
+                    <td class="px-3 py-2 font-mono text-right font-bold text-white" x-text="'R$ ' + formatNum((part.quantidade_acoes_mi || part.quantidade_acoes) * (part.preco_justo_intrinseco || part.preco_mercado))"></td>
                   </tr>
                 </template>
               </tbody>
@@ -314,14 +314,14 @@
     </template>
 
     {# ── Painel Especializado: Saúde Suplementar (Regulação ANS) ─────────────── #}
-    <template x-if="modeloAtual === 'saude_ans' || (detalhesValuation && detalhesValuation.modelo_utilizado && detalhesValuation.modelo_utilizado.toLowerCase().includes('saúde'))">
+    <template x-if="modeloAtual === 'saude_ans'">
       <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700 space-y-5">
         <div class="flex items-center justify-between border-b border-slate-700 pb-3">
           <div>
             <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30">
               Saúde Suplementar
             </span>
-            <h3 class="text-lg font-bold text-white mt-1">Operadora Regulada: DDM com Margem ANS</h3>
+            <h3 class="text-lg font-bold text-white mt-1">Operadora Regulada: DDM com Margem ANS (RN 569/2022)</h3>
           </div>
           <span class="text-xs font-mono text-slate-400">Sinistralidade & Solvência</span>
         </div>
@@ -330,30 +330,30 @@
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
             <p class="text-[10px] uppercase font-bold text-slate-400">Sinistralidade (MLR)</p>
-            <p class="text-lg font-black text-rose-400 font-mono mt-0.5" x-text="(detalhesValuation ? detalhesValuation.sinistralidade_mlr_pct : 0) + '%'"></p>
+            <p class="text-lg font-black text-rose-400 font-mono mt-0.5" x-text="sinistralidadeMlr + '%'"></p>
             <p class="text-[10px] text-slate-500">Eventos / Contraprestações</p>
           </div>
           <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
             <p class="text-[10px] uppercase font-bold text-slate-400">Receita Líquida</p>
-            <p class="text-lg font-black text-white font-mono mt-0.5" x-text="'R$ ' + formatNum(detalhesValuation ? detalhesValuation.receita_liquida_mi : 0) + ' Mi'"></p>
+            <p class="text-lg font-black text-white font-mono mt-0.5" x-text="'R$ ' + formatNum(receitaLiquida) + ' Mi'"></p>
             <p class="text-[10px] text-slate-500">Carteira de Beneficiários</p>
           </div>
           <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
             <p class="text-[10px] uppercase font-bold text-slate-400">Retenção Solvência ANS</p>
-            <p class="text-lg font-black text-amber-400 font-mono mt-0.5" x-text="'R$ ' + formatNum(detalhesValuation ? detalhesValuation.retencao_reserva_solvencia_ans_mi : 0) + ' Mi'"></p>
-            <p class="text-[10px] text-slate-500">Capital Regulatório Exigido</p>
+            <p class="text-lg font-black text-amber-400 font-mono mt-0.5" x-text="'R$ ' + formatNum(resultados.retencaoSolvenciaAns) + ' Mi'"></p>
+            <p class="text-[10px] text-slate-500">Fator k = <span x-text="retencaoAns"></span>% (ΔReceita * k)</p>
           </div>
           <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
-            <p class="text-[10px] uppercase font-bold text-slate-400">Lucro Distribuível</p>
-            <p class="text-lg font-black text-emerald-400 font-mono mt-0.5" x-text="'R$ ' + formatNum(detalhesValuation ? detalhesValuation.lucro_distribuivel_mi : 0) + ' Mi'"></p>
-            <p class="text-[10px] text-slate-500">Base para Proventos</p>
+            <p class="text-[10px] uppercase font-bold text-slate-400">Dívida Líquida</p>
+            <p class="text-lg font-black text-slate-300 font-mono mt-0.5" x-text="'R$ ' + formatNum(dividaLiquida) + ' Mi'"></p>
+            <p class="text-[10px] text-slate-500">Dívida da Operadora</p>
           </div>
         </div>
       </div>
     </template>
 
-    {# ── Métricas Previdenciárias de Décio Bazin (quando disponíveis no JSON importado) ── #}
-    <template x-if="detalhesValuation && detalhesValuation.metrica_bazin">
+    {# ── Métricas Previdenciárias de Décio Bazin ── #}
+    <template x-if="resultados.dpaBazin > 0 || (detalhesValuation && detalhesValuation.metrica_bazin)">
       <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-indigo-500/40 relative overflow-hidden">
         <div class="flex items-center justify-between mb-4 border-b border-slate-700 pb-2">
           <div class="flex items-center gap-2">
@@ -361,29 +361,29 @@
               Método Previdenciário
             </span>
             <h3 class="text-sm font-bold text-white uppercase tracking-wider">
-              Métricas de Décio Bazin & Yield-on-Cost
+              Métricas de Décio Bazin & Yield-on-Cost Reativo
             </h3>
           </div>
-          <span class="text-xs text-slate-400 font-mono" x-text="'DPA Ref: ' + formatMoney(detalhesValuation.metrica_bazin.dpa_projetado)"></span>
+          <span class="text-xs text-slate-400 font-mono" x-text="'DPA Ref: ' + formatMoney(resultados.dpaBazin || (detalhesValuation?.metrica_bazin?.dpa_projetado))"></span>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700">
             <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Teto Bazin (6% a.a.)</p>
-            <p class="text-xl font-black text-emerald-400 font-mono mt-1" x-text="formatMoney(detalhesValuation.metrica_bazin.preco_teto_bazin_6pct)"></p>
+            <p class="text-xl font-black text-emerald-400 font-mono mt-1" x-text="formatMoney(resultados.tetoBazin6 || detalhesValuation?.metrica_bazin?.preco_teto_bazin_6pct)"></p>
             <p class="text-[10px] text-slate-500 mt-1">Margem mínima clássica</p>
           </div>
 
           <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700">
             <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Teto Bazin (8% a.a.)</p>
-            <p class="text-xl font-black text-blue-400 font-mono mt-1" x-text="formatMoney(detalhesValuation.metrica_bazin.preco_teto_bazin_8pct)"></p>
+            <p class="text-xl font-black text-blue-400 font-mono mt-1" x-text="formatMoney(resultados.tetoBazin8 || detalhesValuation?.metrica_bazin?.preco_teto_bazin_8pct)"></p>
             <p class="text-[10px] text-slate-500 mt-1">Margem exigente (Selic alta)</p>
           </div>
 
           <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700">
             <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">YoC no Preço Teto</p>
-            <p class="text-xl font-black text-indigo-400 font-mono mt-1" x-text="(detalhesValuation.metrica_bazin.yield_on_cost_no_preco_teto_modelo || detalhesValuation.metrica_bazin.yield_on_cost_no_preco_teto_dcf || 0).toFixed(2) + '%'"></p>
-            <p class="text-[10px] text-slate-500 mt-1">Dividend Yield inicial no teto</p>
+            <p class="text-xl font-black text-indigo-400 font-mono mt-1" x-text="(resultados.yocNoTeto > 0 ? resultados.yocNoTeto.toFixed(2) : (detalhesValuation?.metrica_bazin?.yield_on_cost_no_preco_teto_modelo || 0).toFixed(2)) + '%'"></p>
+            <p class="text-[10px] text-slate-500 mt-1">Yield inicial no Preço Teto</p>
           </div>
         </div>
       </div>
@@ -418,8 +418,7 @@
       </div>
     </template>
 
-    {# ── Projection detail table (shared cash flows) ─────────────────────────
-    #}
+    {# ── Projection detail table (shared cash flows) ───────────────────────── #}
     <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700">
       <h3
         class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-700 pb-2"
@@ -432,7 +431,7 @@
             <tr>
               <th class="px-4 py-3 rounded-tl-lg font-bold">Ano</th>
               <th class="px-4 py-3 font-bold">Cresc. (%)</th>
-              <th class="px-4 py-3 font-bold">FCLF Projetado</th>
+              <th class="px-4 py-3 font-bold" x-text="modeloAtual === 'saude_ans' ? 'Proventos Distribuíveis' : (modeloAtual === 'gordon_ddm' ? 'Proventos / DPA' : 'FCLF Projetado')"></th>
               <th class="px-4 py-3 text-right rounded-tr-lg font-bold">
                 Valor Presente
               </th>

@@ -20,6 +20,23 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
+def ensure_db_schema():
+    """Migração leve para bases SQLite existentes: adiciona modelo e detalhes caso faltem."""
+    with engine.connect() as conn:
+        from sqlalchemy import text
+        try:
+            result = conn.execute(text("PRAGMA table_info(valuations)")).fetchall()
+            cols = [r[1] for r in result]
+            if cols:
+                if "modelo" not in cols:
+                    conn.execute(text("ALTER TABLE valuations ADD COLUMN modelo VARCHAR DEFAULT 'dcf_fcff'"))
+                if "detalhes" not in cols:
+                    conn.execute(text("ALTER TABLE valuations ADD COLUMN detalhes TEXT"))
+                conn.commit()
+        except Exception:
+            pass
+
+
 def get_db():
     db = SessionLocal()
     try:

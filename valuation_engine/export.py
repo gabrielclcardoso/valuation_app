@@ -42,8 +42,17 @@ def print_dossier_summary(resultado: Dict[str, Any], output_path: Path):
         print(f"• Trajetória de Crescimento (5 anos): {resultado['taxasCrescimento']}")
         print(f"• Crescimento Perpétuo (g_perp): {resultado['crescPerp']:.2f}% a.a.")
         print(f"• Dívida Financeira Líquida: R$ {detalhes.get('divida_financeira_liquida', 0):,.2f} Mi")
-        if detalhes.get("outros_passivos_deduzidos", 0) > 0:
-            print(f"• Quase-Dívidas (Regulatório/Atuarial): R$ {detalhes['outros_passivos_deduzidos']:,.2f} Mi")
+        contingentes_bruto = detalhes.get("passivos_contingentes_bruto", 0)
+        regulatorio = detalhes.get("passivos_regulatorios", 0)
+        outros_deduzidos = detalhes.get("outros_passivos_deduzidos", 0)
+        if contingentes_bruto > 0 or regulatorio != 0 or outros_deduzidos != 0:
+            if contingentes_bruto > 0:
+                print(f"• Passivos Contingentes (Bruto): R$ {contingentes_bruto:,.2f} Mi (Líquido IR/CSLL 34%: R$ {detalhes.get('passivos_contingentes_liquidos', 0):,.2f} Mi)")
+            if regulatorio != 0:
+                if regulatorio < 0:
+                    print(f"• Ativo Regulatório Líquido: R$ {abs(regulatorio):,.2f} Mi")
+                else:
+                    print(f"• Passivo Regulatório: R$ {regulatorio:,.2f} Mi")
             print(f"• Dívida Total Ajustada: R$ {detalhes['divida_total_ajustada']:,.2f} Mi")
 
     elif modelo == "gordon_ddm":
@@ -51,7 +60,7 @@ def print_dossier_summary(resultado: Dict[str, Any], output_path: Path):
         print(f"• ROE Sustentável Adotado: {detalhes.get('roe_adotado_pct', 0):.2f}% a.a.")
         print(f"• Custo do Capital Próprio (Ke): {detalhes.get('ke_adotado_pct', 0):.2f}% a.a.")
         print(f"• Crescimento Perpétuo (g_perp): {resultado['crescPerp']:.2f}% a.a.")
-        print(f"• P/VP Justo Teórico derivado: {detalhes.get('p_vp_justo_gordon', 0):.3f}x")
+        print("• P/VP Justo Teórico derivado: [Preservado no JSON para Modo Cego]")
         print(f"• Payout Sustentável: {detalhes.get('payout_sustentavel_pct', 0):.1f}%")
         print(f"• DPA Base Projetado: R$ {detalhes.get('dpa_ano_base', 0):.4f}")
 
@@ -59,6 +68,8 @@ def print_dossier_summary(resultado: Dict[str, Any], output_path: Path):
         print(f"• Soma das Partes (NAV Bruto Mercado): R$ {detalhes.get('total_mercado_bruto_mi', 0):,.2f} Mi")
         print(f"• Soma das Partes (NAV Bruto Intrínseco): R$ {detalhes.get('total_intrinseco_bruto_mi', 0):,.2f} Mi")
         print(f"• Dívida Líquida Própria da Holding: R$ {detalhes.get('divida_liquida_holding_mi', 0):,.2f} Mi")
+        if detalhes.get("vp_despesas_adm_holding_mi", 0) > 0:
+            print(f"• VP Despesas Administrativas da Holding: R$ {detalhes['vp_despesas_adm_holding_mi']:,.2f} Mi")
         print(f"• Desconto de Holding Adotado: {detalhes.get('desconto_holding_adotado_pct', 0):.1f}%")
         print(f"• DPA Estimado da Holding: R$ {detalhes.get('dpa_holding_projetado', 0):.4f}")
 
