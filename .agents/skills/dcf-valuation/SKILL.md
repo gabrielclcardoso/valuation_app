@@ -70,6 +70,10 @@ Antes de arbitrar o crescimento, classifique a empresa em um dos 3 regimes de me
 3. **Setores Concorrenciais Abertos / Indústria (ex: WEGE3, TUPY3):**
    * Empresas com fortes vantagens competitivas (*moats*) podem sustentar taxas acima do PIB através de ganho contínuo de market share doméstico e internacional.
 
+#### 1.3 Levantamento Patrimonial e Quase-Dívidas Obrigatório:
+* **Dívida Financeira e Caixa:** Colete a dívida bancária bruta e disponibilidades no último balanço. Em empresas de telecom e logística, isole a dívida estritamente financeira dos arrendamentos IFRS 16 (que já reduzem o EBITDA-AL).
+* **Varredura de Contingências (CPC 25 / IAS 37):** Acesse a nota explicativa de Provisões. Identifique o saldo total de contingências com probabilidade de perda provável (cíveis, fiscais, trabalhistas e regulatórias) para alimentar obrigatoriamente `--passivos-contingentes`.
+
 ---
 
 ### Fase 2: Coleta de Variáveis Conforme o Fluxo
@@ -77,7 +81,10 @@ Antes de arbitrar o crescimento, classifique a empresa em um dos 3 regimes de me
 #### Para Fluxo A (DCF Concessões e Indústria):
 1. **FCO Bruto e CapEx:** Segregar CapEx de Sustentação, Expansão Remunerada (RAB) e CapEx Não Oneroso (obrigações compulsórias sem remuneração tarifária).
 2. **Dívida Financeira Líquida:** Dívida Bruta menos Caixa e Aplicações do último ITR (isolando passivos de arrendamento operacional IFRS 16 quando o fluxo já é deduzido de leasing).
-3. **Quase-Dívidas / Passivos Contingentes:** Identificar provisões para contingências judiciais/administrativas prováveis (com benefício fiscal de 34%), passivos regulatórios e déficits atuariais.
+3. **Quase-Dívidas / Passivos Contingentes (Checklist Mandatório):**
+   * É **OBRIGATÓRIO** pesquisar nas Notas Explicativas do DFP/ITR a linha de *Provisões para Processos Judiciais e Administrativos (Cíveis, Trabalhistas, Fiscais e Regulatórios)* com risco de perda provável.
+   * O parâmetro `--passivos-contingentes` NUNCA deve ser deixado em zero sem que o agente declare explicitamente na justificativa que consultou as demonstrações e a empresa não possui processos judiciais provisionados relevantes.
+   * O motor Python aplica automaticamente o benefício fiscal de dedutibilidade de 34% (IRPJ/CSLL) sobre essas contingências, garantindo que o **Cenário Ajustado por Quase-Dívidas** reflita o passivo líquido real que o acionista terá que honrar.
 4. **Base Acionária:** Total de ações emitidas líquidas de tesouraria (Milhões).
 5. **DPA Projetado:** Dividendo por ação esperado e percentual em JCP para métricas de Décio Bazin (6% e 8%).
 
