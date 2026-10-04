@@ -55,6 +55,31 @@ def print_dossier_summary(resultado: Dict[str, Any], output_path: Path):
                     print(f"• Passivo Regulatório: R$ {regulatorio:,.2f} Mi")
             print(f"• Dívida Total Ajustada: R$ {detalhes['divida_total_ajustada']:,.2f} Mi")
 
+        val_cresc = detalhes.get("validacao_crescimento")
+        if val_cresc:
+            if val_cresc.get("cagr_historico_pct") is not None:
+                cagr_txt = f"• Âncora Histórica (FCFF): CAGR de {val_cresc['cagr_historico_pct']:.2f}% a.a."
+                if val_cresc.get("media_historica_fcf") is not None:
+                    cagr_txt += f" (Média: R$ {val_cresc['media_historica_fcf']:,.2f} Mi | Desvio ano-base: {val_cresc['desvio_ano_base_pct']:+.1f}%)"
+                print(cagr_txt)
+            if val_cresc.get("market_share_dinamica"):
+                ms_txt = f"• Dinâmica de Market Share: {val_cresc['market_share_dinamica'].upper()}"
+                if val_cresc.get("analise_competitiva"):
+                    ms_txt += f" ({val_cresc['analise_competitiva']})"
+                print(ms_txt)
+            if val_cresc.get("decomposicao_g1"):
+                dec = val_cresc["decomposicao_g1"]
+                print(
+                    f"• Decomposição da Taxa g1 ({dec['g1_adotado']:.2f}%): "
+                    f"IPCA ({dec['ipca']:.2f}%) + Volume Setor ({dec['volume_setor']:.2f}%) + "
+                    f"Share/Pricing ({dec['market_share_pricing']:.2f}%)"
+                )
+            if val_cresc.get("mensagem_coerencia"):
+                prefix = "✓" if val_cresc.get("status_coerencia") == "coerente" else "⚠"
+                print(f"• {prefix} Coerência de Crescimento: {val_cresc['mensagem_coerencia']}")
+            if val_cresc.get("alerta_base"):
+                print(f"• ⚠ Alerta Ano-Base: {val_cresc['alerta_base']}")
+
     elif modelo == "gordon_ddm":
         print(f"• VPA (Valor Patrimonial por Ação): R$ {detalhes.get('vpa', 0):,.2f}")
         print(f"• ROE Sustentável Adotado: {detalhes.get('roe_adotado_pct', 0):.2f}% a.a.")

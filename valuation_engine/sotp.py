@@ -68,17 +68,10 @@ def calculate_sotp_holding(
             p_intrinseco = float(p_intrinseco_val)
             usou_fallback = False
             fonte = "intrinseco_calculado"
-        elif p_mercado > 0:
-            p_intrinseco = p_mercado
-            usou_fallback = True
-            fonte = "mercado_fallback"
-            avisos.append(
-                f"Atenção: A investida '{nome}' ({tick}) não possui preço justo intrínseco informado. "
-                f"Foi adotada a cotação de mercado R$ {p_mercado:.2f} como fallback provisório."
-            )
         else:
             raise ValueError(
-                f"A investida '{nome}' ({tick}) deve possuir preço justo intrínseco ou de mercado maior que zero."
+                f"SOTP Violado: A investida '{nome}' não possui preço justo intrínseco informado. "
+                "O uso de cotação de mercado como fallback para investidas principais é proibido."
             )
 
         val_mercado = qtd * p_mercado
@@ -111,8 +104,9 @@ def calculate_sotp_holding(
     desp_adm = float(despesas_adm_holding)
     ke_h_dec = float(ke_holding) / 100.0
 
-    if desp_adm > 0 and ke_h_dec > 0:
-        vp_despesas_adm = desp_adm / ke_h_dec
+    g_inflacao = 0.035
+    if desp_adm > 0 and ke_h_dec > g_inflacao:
+        vp_despesas_adm = desp_adm / (ke_h_dec - g_inflacao)
     else:
         vp_despesas_adm = 0.0
 

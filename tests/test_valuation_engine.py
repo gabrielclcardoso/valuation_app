@@ -14,6 +14,8 @@ from routers.valuations import save_valuation, list_valuations, delete_valuation
 from valuation_engine import (
     calculate_bazin,
     calculate_dcf,
+    calculate_cagr,
+    validate_growth_and_market_share,
     calculate_financials_ddm,
     calculate_sotp_holding,
     calculate_operadora_saude,
@@ -137,6 +139,74 @@ class TestValuationEngine(unittest.TestCase):
                 divida_liquida=0.0,
                 num_acoes=10.0,
             )
+
+    def test_calculate_cagr(self):
+        # 100 crescendo para 133.1 em 3 anos = 10% a.a.
+        cagr = calculate_cagr(100.0, 133.1, 3)
+        self.assertEqual(cagr, 10.0)
+
+        # Casos inválidos retornam 0.0
+        self.assertEqual(calculate_cagr(0.0, 100.0, 3), 0.0)
+        self.assertEqual(calculate_cagr(-50.0, 100.0, 3), 0.0)
+        self.assertEqual(calculate_cagr(100.0, 100.0, 0), 0.0)
+
+    def test_validate_growth_and_market_share(self):
+        # Histórico de 3 anos: 3700, 4600, 5300 (CAGR = 19.68%)
+        res = validate_growth_and_market_share(
+            fclf_inicial=5300.0,
+            taxas_crescimento=[5.0, 4.5, 4.0, 3.5, 3.0],
+            cresc_perp=3.0,
+            historico_fcf=[3700.0, 4600.0, 5300.0],
+            market_share_dinamica="estavel",
+            decomposicao_g1=[3.8, 0.5, 0.7],
+            analise_competitiva="Triopólio de telecom com disciplina de preços",
+        )
+        self.assertIsNotNone(res["cagr_historico_pct"])
+        self.assertAlmostEqual(res["cagr_historico_pct"], 19.68, places=1)
+        self.assertEqual(res["status_coerencia"], "coerente")
+        self.assertTrue(res["convergencia_perpetuidade"])
+        self.assertEqual(res["market_share_dinamica"], "estavel")
+        self.assertIsNotNone(res["decomposicao_g1"])
+        self.assertEqual(res["decomposicao_g1"]["soma"], 5.0)
+        self.assertEqual(res["decomposicao_g1"]["g1_adotado"], 5.0)
+
+        # Caso com alerta de aceleração (g1 > cagr + 3%)
+        res_alerta = validate_growth_and_market_share(
+            fclf_inicial=100.0,
+            taxas_crescimento=[10.0, 8.0, 6.0],
+            cresc_perp=3.0,
+            cagr_historico=2.0,
+        )
+        self.assertEqual(res_alerta["status_coerencia"], "alerta_aceleracao")
+        self.assertIn("alerta_aceleracao", res_alerta["status_coerencia"])
+
+    def test_dcf_with_growth_and_market_share_validation(self):
+        res = calculate_dcf(
+            ticker="TIMS3",
+            fclf_inicial=5300.0,
+            taxas_crescimento=[5.0, 4.5, 4.0, 3.5, 3.0],
+            wacc=12.37,
+            cresc_perp=3.5,
+            divida_liquida=1800.0,
+            passivos_contingentes=2100.0,
+            num_acoes=2378.93,
+            margem_seguranca=20.0,
+            dpa_projetado=1.50,
+            pct_jcp=35.0,
+            historico_fcf=[3700.0, 4600.0, 5300.0],
+            market_share_dinamica="estavel",
+            decomposicao_g1=[3.8, 0.5, 0.7],
+            analise_competitiva="Triopólio de telecomunicações; ARPU em expansão",
+            empresa="TIM S.A.",
+            setor="Telecomunicações",
+        )
+        detalhes = res["detalhes"]
+        self.assertIn("validacao_crescimento", detalhes)
+        val = detalhes["validacao_crescimento"]
+        self.assertEqual(val["market_share_dinamica"], "estavel")
+        self.assertEqual(val["cagr_historico_pct"], 19.68)
+        self.assertEqual(val["decomposicao_g1"]["g1_adotado"], 5.0)
+        self.assertEqual(val["decomposicao_g1"]["soma"], 5.0)
 
     def test_dcf_invalid_shares(self):
         with self.assertRaises(ValueError):
@@ -274,14 +344,14 @@ class TestValuationEngine(unittest.TestCase):
             despesas_adm_holding=120.0,
             ke_holding=12.0,
         )
-        self.assertEqual(res_com["detalhes"]["vp_despesas_adm_holding_mi"], 1000.0)
+        self.assertEqual(res_com["detalhes"]["vp_despesas_adm_holding_mi"], 1411.76)
         self.assertLess(res_com["precoJusto"], res_sem["precoJusto"])
-        # Diferença de NAV líquido deve ser exatamente 1000 Mi
+        # Diferença de NAV líquido deve ser exatamente 1411.76 Mi
         diff_nav = res_sem["detalhes"]["nav_intrinseco_liquido_mi"] - res_com["detalhes"]["nav_intrinseco_liquido_mi"]
-        self.assertEqual(round(diff_nav, 2), 1000.0)
+        self.assertEqual(round(diff_nav, 2), 1411.76)
 
     def test_sotp_holding_fallback_warning(self):
-        # Investida sem preco_justo_intrinseco informado emite aviso explícito
+        # Investida sem preco_justo_intrinseco informado emite ValueError
         participacoes = [
             {
                 "nome": "Investida Bolsa",
@@ -290,15 +360,13 @@ class TestValuationEngine(unittest.TestCase):
                 "preco_mercado": 20.0,
             }
         ]
-        res = calculate_sotp_holding(
-            ticker="HOLD3",
-            participacoes=participacoes,
-            divida_liquida_holding=100.0,
-            num_acoes_holding=50.0,
-        )
-        self.assertTrue(res["detalhes"]["possui_fallback_mercado"])
-        self.assertGreater(len(res["detalhes"]["avisos"]), 0)
-        self.assertTrue(res["detalhes"]["participacoes"][0]["usou_fallback_mercado"])
+        with self.assertRaises(ValueError):
+            calculate_sotp_holding(
+                ticker="HOLD3",
+                participacoes=participacoes,
+                divida_liquida_holding=100.0,
+                num_acoes_holding=50.0,
+            )
 
     def test_sotp_holding_edge_cases(self):
         with self.assertRaises(ValueError):
@@ -360,8 +428,8 @@ class TestValuationEngine(unittest.TestCase):
         )
         self.assertEqual(res_growth["detalhes"]["retencao_reserva_solvencia_ans_mi"], 15.0)
 
-    def test_operadora_saude_net_debt_deduction(self):
-        # Operadora alavancada: dedução da dívida líquida do equity value
+    def test_operadora_saude_net_debt_ignored(self):
+        # Operadora alavancada: dívida líquida NÃO deve ser deduzida no DDM
         res_desalav = calculate_operadora_saude(
             ticker="HAPV3",
             receita_liquida=5000.0,
@@ -379,13 +447,13 @@ class TestValuationEngine(unittest.TestCase):
             sinistralidade_mlr_pct=75.0,
             despesas_adm_comerciais_pct=12.0,
             resultado_financeiro=50.0,
-            divida_liquida=2000.0,  # 2000 Mi de dívida líquida / 1000 Mi ações = R$ 2.00 por ação
+            divida_liquida=2000.0,  # Dívida não deve abater o Equity Value
             num_acoes=1000.0,
             ke=13.5,
             cresc_perp=3.5,
         )
         diff_preco = res_desalav["precoJusto"] - res_alav["precoJusto"]
-        self.assertEqual(round(diff_preco, 2), 2.00)
+        self.assertEqual(round(diff_preco, 2), 0.00)
 
     def test_operadora_saude_edge_cases(self):
         with self.assertRaises(ValueError):
@@ -482,8 +550,8 @@ class TestValuationEngine(unittest.TestCase):
         )
         self.assertEqual(res_flat["detalhes"]["retencao_reserva_solvencia_ans_mi"], 0.0)
 
-    def test_operadora_saude_excessive_debt_clamped_zero(self):
-        # Dívida líquida muito superior ao valor presente dos dividendos: Preço Justo é travado em 0.0
+    def test_operadora_saude_excessive_debt_ignored(self):
+        # Dívida líquida muito superior ao VP dos dividendos não afeta o Preço Justo no modelo DDM
         res = calculate_operadora_saude(
             ticker="DEBT3",
             receita_liquida=100.0,
@@ -493,8 +561,8 @@ class TestValuationEngine(unittest.TestCase):
             divida_liquida=50000.0,
             num_acoes=10.0,
         )
-        self.assertEqual(res["precoJusto"], 0.0)
-        self.assertEqual(res["precoTeto"], 0.0)
+        self.assertGreater(res["precoJusto"], 0.0)
+        self.assertEqual(res["precoJusto"], 4.09)
 
     def test_bazin_custom_irrf_and_100pct_jcp(self):
         # Proventos com 50% dividendos e 50% JCP retido a 20% de IRRF

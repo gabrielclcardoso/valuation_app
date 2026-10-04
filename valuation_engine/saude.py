@@ -142,10 +142,12 @@ def calculate_operadora_saude(
     valor_terminal_dpa = dpa_terminal / (ke_dec - g_perp_dec)
     vp_terminal = valor_terminal_dpa / ((1.0 + ke_dec) ** len(taxas))
 
-    # 4. Preço Justo e Preço Teto (com dedução de dívida líquida se aplicável)
+    # 4. Preço Justo e Preço Teto
+    # CORREÇÃO: No DDM, o VP dos dividendos JÁ É o Equity Value.
+    # Subtrair Dívida Líquida configuraria dupla penalização.
     div_liq = float(divida_liquida)
     equity_per_share = soma_pv + vp_terminal
-    preco_justo = max(0.0, equity_per_share - (div_liq / float(num_acoes)))
+    preco_justo = max(0.0, equity_per_share)
     preco_teto = preco_justo * (1.0 - (float(margem_seguranca) / 100.0))
 
     # Métrica Bazin
@@ -184,7 +186,8 @@ def calculate_operadora_saude(
             "lucro_liquido_projetado_mi": round(lucro_liq_base, 2),
             "retencao_reserva_solvencia_ans_mi": round(retencao_ans_base, 2),
             "lucro_distribuivel_mi": round(lucro_dist_base, 2),
-            "divida_liquida_deduzida_mi": round(div_liq, 2),
+            "payout_sustentavel_pct": round(float(payout_sustentavel_pct), 2),
+            "divida_liquida_deduzida_mi": 0.0, # Zerado, Dívida não deve mais ser deduzida no DDM
             "dpa_ano_base": round(dpa_base, 4),
             "metrica_bazin": metrica_bazin,
             "projecoes_dpa": projecoes,

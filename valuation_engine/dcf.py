@@ -44,6 +44,109 @@ def calculate_wacc(
     }
 
 
+def calculate_cagr(valor_inicial: float, valor_final: float, periodos: int) -> float:
+    """Calcula a taxa de crescimento anual composta (CAGR) em porcentagem.
+    Retorna 0.0 se valores forem inválidos ou períodos <= 0.
+    """
+    if valor_inicial <= 0 or valor_final <= 0 or periodos <= 0:
+        return 0.0
+    return round(((valor_final / valor_inicial) ** (1.0 / periodos) - 1.0) * 100.0, 2)
+
+
+def validate_growth_and_market_share(
+    fclf_inicial: float,
+    taxas_crescimento: List[float],
+    cresc_perp: float,
+    historico_fcf: Optional[List[float]] = None,
+    cagr_historico: Optional[float] = None,
+    market_share_dinamica: Optional[str] = None,
+    decomposicao_g1: Optional[List[float]] = None,
+    analise_competitiva: str = "",
+) -> Dict[str, Any]:
+    """Analisa a consistência do crescimento projetado frente ao histórico e dinâmica concorrencial.
+    
+    Args:
+        fclf_inicial: Fluxo de caixa do ano base adotado (R$ Milhões).
+        taxas_crescimento: Taxas de crescimento projetadas dos fluxos explícitos (%).
+        cresc_perp: Taxa de crescimento perpétuo (%).
+        historico_fcf: Lista de fluxos realizados dos últimos anos (ex: [3700, 4600, 5300]).
+        cagr_historico: CAGR histórico de referência informado (%).
+        market_share_dinamica: 'estavel', 'ganho', 'perda' ou 'monopolio_regulado'.
+        decomposicao_g1: Lista [ipca, volume_setor, pricing_or_share] para decompor a taxa g1.
+        analise_competitiva: Racional qualitativo de vantagem competitiva / market share.
+    """
+    cagr_apurado = None
+    media_historica = None
+    desvio_base_pct = None
+
+    if historico_fcf and len(historico_fcf) >= 2:
+        periodos = len(historico_fcf) - 1
+        cagr_apurado = calculate_cagr(historico_fcf[0], historico_fcf[-1], periodos)
+        media_historica = sum(historico_fcf) / len(historico_fcf)
+        if media_historica > 0:
+            desvio_base_pct = round(((fclf_inicial - media_historica) / media_historica) * 100.0, 2)
+    elif cagr_historico is not None:
+        cagr_apurado = round(float(cagr_historico), 2)
+
+    # Verificação de convergência em direção à perpetuidade (decaimento monotônico e proximidade a g_perp)
+    is_descending_or_stable = all(
+        taxas_crescimento[i] >= taxas_crescimento[i + 1] for i in range(len(taxas_crescimento) - 1)
+    )
+    converge_proximo_perp = abs(taxas_crescimento[-1] - cresc_perp) <= 1.5
+    convergencia_perpetuidade = is_descending_or_stable and converge_proximo_perp
+
+    # Avaliação de coerência frente ao histórico
+    status_coerencia = "nao_informado"
+    mensagem_coerencia = None
+    if cagr_apurado is not None and taxas_crescimento:
+        g1 = taxas_crescimento[0]
+        if g1 > cagr_apurado + 3.0:
+            status_coerencia = "alerta_aceleracao"
+            mensagem_coerencia = (
+                f"Taxa g1 ({g1:.1f}%) projeta aceleração frente ao CAGR histórico ({cagr_apurado:.1f}%). "
+                f"Exige gatilho de investimento (CapEx) ou ganho comprovado de market share."
+            )
+        else:
+            status_coerencia = "coerente"
+            mensagem_coerencia = (
+                f"Taxa g1 ({g1:.1f}%) compatível com a capacidade histórica demonstrada ({cagr_apurado:.1f}% a.a.)."
+            )
+
+    alerta_base = None
+    if desvio_base_pct is not None and abs(desvio_base_pct) > 25.0:
+        alerta_base = (
+            f"O FCFF inicial (R$ {fclf_inicial:,.2f} Mi) desvia {desvio_base_pct:+.1f}% da média histórica "
+            f"(R$ {media_historica:,.2f} Mi). Verifique se o ano-base inclui efeitos não recorrentes ou NCG atípico."
+        )
+
+    decomposicao = None
+    if decomposicao_g1 and len(decomposicao_g1) == 3 and taxas_crescimento:
+        ipca, volume, share_pricing = [round(float(v), 2) for v in decomposicao_g1]
+        soma = round(ipca + volume + share_pricing, 2)
+        decomposicao = {
+            "ipca": ipca,
+            "volume_setor": volume,
+            "market_share_pricing": share_pricing,
+            "soma": soma,
+            "g1_adotado": round(taxas_crescimento[0], 2),
+            "diferenca": round(soma - taxas_crescimento[0], 2),
+        }
+
+    return {
+        "cagr_historico_pct": cagr_apurado,
+        "historico_fcf": [round(float(v), 2) for v in historico_fcf] if historico_fcf else None,
+        "media_historica_fcf": round(media_historica, 2) if media_historica is not None else None,
+        "desvio_ano_base_pct": desvio_base_pct,
+        "market_share_dinamica": market_share_dinamica,
+        "analise_competitiva": analise_competitiva,
+        "decomposicao_g1": decomposicao,
+        "convergencia_perpetuidade": convergencia_perpetuidade,
+        "status_coerencia": status_coerencia,
+        "mensagem_coerencia": mensagem_coerencia,
+        "alerta_base": alerta_base,
+    }
+
+
 def calculate_dcf(
     ticker: str,
     fclf_inicial: float,
@@ -60,6 +163,11 @@ def calculate_dcf(
     margem_seguranca: float = 20.0,
     dpa_projetado: float = 0.0,
     pct_jcp: float = 0.0,
+    historico_fcf: Optional[List[float]] = None,
+    cagr_historico: Optional[float] = None,
+    market_share_dinamica: Optional[str] = None,
+    decomposicao_g1: Optional[List[float]] = None,
+    analise_competitiva: str = "",
     empresa: str = "",
     setor: str = "",
     metadata: Optional[Dict[str, Any]] = None,
@@ -82,6 +190,11 @@ def calculate_dcf(
         margem_seguranca: Margem de segurança aplicada ao Preço Justo (%)
         dpa_projetado: DPA sustentável esperado para métrica Bazin (R$)
         pct_jcp: Percentual dos proventos pagos sob a forma de JCP bruto (%)
+        historico_fcf: Lista de FCF dos últimos exercícios fechados (R$ Mi)
+        cagr_historico: CAGR histórico de referência para teste de coerência (%)
+        market_share_dinamica: 'estavel', 'ganho', 'perda' ou 'monopolio_regulado'
+        decomposicao_g1: [ipca, volume_setor, pricing_or_share] para justificar g1
+        analise_competitiva: Racional de market share ou moats da empresa
         empresa: Nome corporativo da empresa
         setor: Setor de atuação
         metadata: Dicionário adicional com memórias de cálculo e justificativas
@@ -95,6 +208,10 @@ def calculate_dcf(
         )
     if num_acoes <= 0:
         raise ValueError("O número de ações deve ser maior que zero.")
+
+    # Validação contra projeção infinita de fluxos negativos
+    if fclf_inicial < 0:
+        raise ValueError(f"O FCFF do ano-base não pode ser negativo (R$ {fclf_inicial} Mi) para projeção da taxa de crescimento 'g'. A normalização prévia do fluxo inicial é obrigatória.")
 
     # 1. Projeção dos fluxos explícitos
     fcf_atual = float(fclf_inicial)
@@ -179,6 +296,18 @@ def calculate_dcf(
         pct_jcp=pct_jcp,
     )
 
+    # Validação do triângulo de crescimento (Histórico, Mercado e Reinvestimento)
+    validacao_crescimento = validate_growth_and_market_share(
+        fclf_inicial=fclf_inicial,
+        taxas_crescimento=taxas_crescimento,
+        cresc_perp=cresc_perp,
+        historico_fcf=historico_fcf,
+        cagr_historico=cagr_historico,
+        market_share_dinamica=market_share_dinamica,
+        decomposicao_g1=decomposicao_g1,
+        analise_competitiva=analise_competitiva,
+    )
+
     meta = metadata.copy() if metadata else {}
     if empresa:
         meta["empresa"] = empresa
@@ -230,6 +359,7 @@ def calculate_dcf(
             },
             "metrica_bazin": metrica_bazin,
             "projecoes": projecoes,
+            "validacao_crescimento": validacao_crescimento,
             "metadata": meta,
         },
     }

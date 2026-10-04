@@ -30,6 +30,7 @@ document.addEventListener("alpine:init", () => {
     modeloAtual: "dcf_fcff",
     importedPrecoJusto: null,
     importedPrecoTeto: null,
+    parametrosModificados: false,
 
     // Variáveis Específicas dos Modelos para Reatividade em Tempo Real
     // 1. Gordon & DDM (Bancos e Seguradoras)
@@ -223,9 +224,10 @@ document.addEventListener("alpine:init", () => {
           this.restaurarParametrosDoModelo(this.detalhesValuation);
         }
 
-        // Não congelamos importedPrecoJusto para que o cálculo seja sempre reativo
-        this.importedPrecoJusto = null;
-        this.importedPrecoTeto = null;
+        // SSOT: Congelar o resultado rigoroso do Motor Python
+        this.importedPrecoJusto = data.precoJusto !== undefined ? parseNum(data.precoJusto) : parseNum(data.preco_justo);
+        this.importedPrecoTeto = data.precoTeto !== undefined ? parseNum(data.precoTeto) : parseNum(data.preco_teto);
+        this.parametrosModificados = false; 
 
         this.modalImportarAberto = false;
         this.jsonParaImportar = "";
@@ -246,6 +248,9 @@ document.addEventListener("alpine:init", () => {
     },
 
     init() {
+      document.addEventListener('input', (e) => {
+        this.parametrosModificados = true;
+      });
       this.$watch("anosProjecao", (val) => {
         let num = parseInt(val) || 1;
         if (num > 20) num = 20;
@@ -613,10 +618,22 @@ document.addEventListener("alpine:init", () => {
       }
 
       // Preço Teto Bazin e YoC reativo
-      const dpaBazin = dpaReativo > 0 ? dpaReativo : parseNum(this.detalhesValuation?.metrica_bazin?.dpa_projetado, 0);
-      const yocNoTeto = (dpaBazin > 0 && precoTeto > 0) ? (dpaBazin / precoTeto * 100) : 0;
-      const tetoBazin6 = dpaBazin > 0 ? (dpaBazin / 0.06) : 0;
-      const tetoBazin8 = dpaBazin > 0 ? (dpaBazin / 0.08) : 0;
+      let dpaBazin = dpaReativo > 0 ? dpaReativo : parseNum(this.detalhesValuation?.metrica_bazin?.dpa_projetado, 0);
+      let yocNoTeto = (dpaBazin > 0 && precoTeto > 0) ? (dpaBazin / precoTeto * 100) : 0;
+      let tetoBazin6 = dpaBazin > 0 ? (dpaBazin / 0.06) : 0;
+      let tetoBazin8 = dpaBazin > 0 ? (dpaBazin / 0.08) : 0;
+
+      // SSOT DO BACKEND: Sobrescreve a simulação rasa do JS com os cálculos exatos em Python 
+      // (que incluem tributação JCP, passivos contingentes e regulatórios)
+      if (this.parametrosModificados === false && this.importedPrecoJusto !== null) {
+          precoJusto = this.importedPrecoJusto;
+          precoTeto = this.importedPrecoTeto;
+          if (this.detalhesValuation && this.detalhesValuation.metrica_bazin) {
+              tetoBazin6 = this.detalhesValuation.metrica_bazin.teto_bazin_6pct;
+              tetoBazin8 = this.detalhesValuation.metrica_bazin.teto_bazin_8pct;
+              yocNoTeto = this.detalhesValuation.metrica_bazin.yoc_no_teto_modelo_pct;
+          }
+      }
 
       return {
         erro,

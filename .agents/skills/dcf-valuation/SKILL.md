@@ -47,11 +47,28 @@ flowchart TD
 
 > [!WARNING]
 > **REGRA DE ATUALIDADE TEMPORAL (ANTI-DESATUALIZAÇÃO):**
-> * **NUNCA chumbe anos passados nas buscas** (ex: NUNCA pesquise termos fixos como `"DFP 2024"` ou `"4T24"`). Identifique o ano civil atual antes de pesquisar.
+> * **Verifique o ano civil atual antes de pesquisar:** Execute `date` ou leia a metadata do sistema.
+> * **NUNCA chumbe anos passados nas buscas iniciais** (ex: NUNCA pesquise termos fixos como `"DFP 2024"` ou `"4T24"` antes de saber o ano corrente).
 > * **Acesse primeiro a Central de Resultados oficial:**
 >   Faça buscas como `site:ri.<empresa>.com.br "Central de Resultados"` ou `site:cvm.gov.br "<empresa>" "DFP"`.
 > * **Posição Patrimonial Recente:** Para Caixa e Dívida, utilize o último balanço trimestral (ITR) disponível.
 > * **Prioridade da pasta `reports/`:** Se o usuário colocar um relatório na pasta `reports/`, utilize esse documento como fonte primária da verdade.
+
+#### 1.1 Levantamento Histórico Obrigatório (3 a 5 Anos - Anti-Distorção de Base):
+* Colete a série histórica de **Receita Líquida, EBITDA e Fluxo de Caixa Livre ($OpFCF = \text{EBITDA-AL} - \text{CapEx}$ ou $FCO - \text{CapEx}$)** dos últimos 3 exercícios fechados.
+* Calcule a média histórica do FCFF e o CAGR histórico de 3 anos.
+* Identifique distorções não recorrentes: créditos tributários extraordinários, descompassos temporários de capital de giro (NCG) ou M&A inorgânico (ex: compra da Oi Móvel).
+
+#### 1.2 Diagnóstico da Dinâmica Concorrencial & Market Share:
+Antes de arbitrar o crescimento, classifique a empresa em um dos 3 regimes de mercado:
+1. **Oligopólios Racionais (ex: Telecomunicações — TIMS3, VIVT3; Grandes Bancos):**
+   * Fatia de mercado (*Volume Share*) cristalizada. Guerras predatórias de preços destroem margem.
+   * Premissa de mercado: **Market share em volume estável** (acompanha crescimento demográfico/PIB). O ganho real vem de **ARPU / Value Share** (migração de planos, 5G, valor agregado).
+2. **Monopólios Naturais / Concessões Reguladas (ex: Saneamento, Transmissão Elétrica — SAPR4, SBSP3, TAEE11):**
+   * Área de atendimento exclusiva contratual (sem concorrência de varejo).
+   * O crescimento vem da **expansão da Base de Ativos Regulatórios (RAB)**, metas contratuais do marco legal e reajuste inflacionário das tarifas.
+3. **Setores Concorrenciais Abertos / Indústria (ex: WEGE3, TUPY3):**
+   * Empresas com fortes vantagens competitivas (*moats*) podem sustentar taxas acima do PIB através de ganho contínuo de market share doméstico e internacional.
 
 ---
 
@@ -59,10 +76,22 @@ flowchart TD
 
 #### Para Fluxo A (DCF Concessões e Indústria):
 1. **FCO Bruto e CapEx:** Segregar CapEx de Sustentação, Expansão Remunerada (RAB) e CapEx Não Oneroso (obrigações compulsórias sem remuneração tarifária).
-2. **Dívida Financeira Líquida:** Dívida Bruta menos Caixa e Aplicações do último ITR.
-3. **Quase-Dívidas / Outros Passivos Onerosos:** Identificar passivos regulatórios (Agepar/Aneel), déficits atuariais de fundos de pensão pós-emprego (Fusanprev, Petros, Funcef) e contingências prováveis.
-4. **Base Acionária:** Total de ações emitidas ou Units equivalentes (Milhões).
-5. **DPA Projetado:** Dividendo por ação esperado para métricas de Décio Bazin (6% e 8%).
+2. **Dívida Financeira Líquida:** Dívida Bruta menos Caixa e Aplicações do último ITR (isolando passivos de arrendamento operacional IFRS 16 quando o fluxo já é deduzido de leasing).
+3. **Quase-Dívidas / Passivos Contingentes:** Identificar provisões para contingências judiciais/administrativas prováveis (com benefício fiscal de 34%), passivos regulatórios e déficits atuariais.
+4. **Base Acionária:** Total de ações emitidas líquidas de tesouraria (Milhões).
+5. **DPA Projetado:** Dividendo por ação esperado e percentual em JCP para métricas de Décio Bazin (6% e 8%).
+
+#### 🧭 Subfase 2.1: Triângulo de Validação do Crescimento ($g$) e Base ($FCFF_0$)
+Para evitar arbitrariedade nas taxas projetadas ($g_1 \dots g_5$), aplique o triângulo fundamentalista:
+* **Âncora 1: Normalização do Ano-Base ($FCFF_0$):**
+  Compare o FCFF recente com a média dos últimos 3 anos. Se o desvio for superior a 25%, justifique se o ano recente reflete um novo patamar estrutural ou se requer normalização.
+* **Âncora 2: Teste de Coerência Histórica (CAGR 3A):**
+  A taxa inicial $g_1$ não deve superar o CAGR histórico sem que haja um gatilho comprovado (ex: entrada em operação de grandes obras de CapEx, novo contrato ou ganho medido de share).
+* **Âncora 3: Decomposição Vetorial da Taxa Inicial ($g_1$):**
+  A taxa $g_1$ deve ser explicitada como a soma de três vetores econômicos:
+  $$g_1 = \underbrace{\text{IPCA Esperado}}_{\text{Repasse Inflacionário}} + \underbrace{\Delta \text{Volume Setor/PIB}}_{\text{Crescimento da Indústria}} + \underbrace{\Delta \text{Market Share / Pricing Power}}_{\text{Diferencial Competitivo}}$$
+* **Trajetória de Convergência Monotônica:**
+  As taxas explícitas ($g_1, g_2, \dots, g_5$) devem decair de forma suave e contínua, convergindo para a taxa de crescimento perpétuo ($g_{\text{perp}}$).
 
 #### Para Fluxo B (Bancos e Seguradoras):
 1. **VPA (Valor Patrimonial por Ação):** Do último balanço trimestral publicado.
@@ -81,7 +110,7 @@ flowchart TD
 #### Para Fluxo D (Operadoras de Saúde ANS):
 1. **Receita Líquida:** Contraprestações emitidas de planos de saúde.
 2. **MLR (Sinistralidade Médica %):** Eventos indenizáveis / Receita Líquida.
-3. **Resultado Financeiro:** Ganhos obtidos com o *float* das reservas técnicas.
+3. **Resultado Financeiro:** Ganhos obtidos com o *float* das reservas técnicas. **ATENÇÃO:** O parâmetro `--res-financeiro` deve ser o resultado financeiro LÍQUIDO (Ganhos do Float menos Despesas de Juros da Dívida). Como o DDM/FCFE não deduz a Dívida Líquida no final, o peso da alavancagem deve estar precificado no lucro distribuível base.
 4. **Retenção para Margem de Solvência da ANS (%):** Capital regulatório retido.
 5. **Custo de Capital Próprio ($K_e$).**
 
@@ -100,13 +129,13 @@ flowchart TD
 
 > [!IMPORTANT]
 > **O MODO CEGO É OBRIGATÓRIO (BLIND VALUATION):**
-> * O agente **NUNCA DEVE CITAR NEM CALCULAR EM TEXTO NO CHAT** o Preço Justo, Preço Teto ou Cotação Atual.
-> * Todos os preços ficam guardados **exclusivamente dentro do arquivo JSON** gerado em `valuations/<TICKER>_valuation.json`.
+> * O agente **NUNCA DEVE CITAR NEM CALCULAR EM TEXTO NO CHAT** o Preço Justo, Preço Teto, Cotação Atual, e **TAMBÉM NÃO DEVE DIVULGAR o Enterprise Value (EV) ou Equity Value consolidado**.
+> * Todos os preços e valores patrimoniais ficam guardados **exclusivamente dentro do arquivo JSON** gerado em `valuations/<TICKER>_valuation.json`.
 > * No chat, apresente **apenas o Dossiê das Premissas Econômicas** para análise e questionamento do usuário.
 
 #### Comandos de Execução por Tipo de Empresa:
 
-**1. Para Concessões, Utilities e Indústria (DCF):**
+**1. Para Concessões, Utilities e Indústria (DCF com Triângulo de Crescimento):**
 ```bash
 python .agents/skills/dcf-valuation/scripts/calc_dcf.py \
   --ticker <TICKER> \
@@ -115,10 +144,15 @@ python .agents/skills/dcf-valuation/scripts/calc_dcf.py \
   --wacc <WACC_PCT> \
   --cresc-perp <G_PERP_PCT> \
   --divida-liq <DIVIDA_FINANCEIRA_LIQ_MI> \
-  --outros-passivos <PASSIVOS_REGULATORIOS_ATUARIAIS_MI> \
+  --passivos-contingentes <PASSIVOS_DEDUTIVEIS_MI> \
   --num-acoes <ACOES_MI> \
   --margem 20.0 \
   --dpa <DPA_PROJETADO> \
+  --pct-jcp <PCT_JCP> \
+  --historico-fcf <FCF_ANO1> <FCF_ANO2> <FCF_ANO3> \
+  --market-share-dinamica <estavel|ganho|perda|monopolio_regulado> \
+  --decomposicao-g1 <IPCA> <VOLUME_SETOR> <PRICING_SHARE> \
+  --analise-competitiva "<ANALISE_DO_SETOR_E_MOATS>" \
   --empresa "<NOME>" \
   --setor "<SETOR>"
 ```
@@ -171,10 +205,19 @@ python .agents/skills/dcf-valuation/scripts/calc_saude.py \
 ---
 
 ### Apresentação no Chat: Dossiê das Premissas
-Após executar o script correspondente, apresente o Dossiê das Premissas no chat (sem citar preços):
-1. **Memória de Fluxos / Resultados:** Detalhe a origem dos dados contábeis (DFP/ITR).
-2. **Taxa de Desconto ($WACC$ ou $K_e$):** Abra todos os componentes macroeconômicos ($R_f$, inflação, beta, ERP).
-3. **Trajetória de Crescimento ($g$ e $g_{\text{perp}}$):** Justifique os percentuais ano a ano.
+Após executar o script correspondente, apresente o Dossiê das Premissas no chat (sem citar preços nem equity value):
+1. **Memória de Fluxos / Resultados:** Detalhe a origem dos dados contábeis (DFP/ITR) e histórico dos últimos 3 anos.
+2. **Validação do Triângulo de Crescimento:** Apresente o CAGR histórico, a dinâmica de market share e a decomposição de $g_1$.
+3. **Taxa de Desconto ($WACC$ ou $K_e$):** Abra todos os componentes macroeconômicos ($R_f$, inflação, beta, ERP).
 4. **Estrutura Patrimonial:** Dívida financeira líquida, quase-dívidas regulatórias/atuariais e número de ações.
 5. **Métrica Previdenciária de Bazin:** DPA adotado e confirmação de integração dos Tetos de 6% e 8% no JSON.
 6. **Caminho do Arquivo:** Informe o caminho `valuations/<TICKER>_valuation.json` pronto para ser importado na Calculadora Web.
+
+---
+
+### 🛡️ Regras de Conduta para Interações e Dúvidas Pós-Valuation:
+1. **Preservação Contínua do Modo Cego:** Se o usuário fizer perguntas sobre como o cálculo foi feito ou solicitar a memória matemática, explique as fórmulas e os percentuais, mas **nunca revele o Equity Value ou o Preço por Ação no chat**. Instrua o usuário a conferir os valores finais na interface web ou abrindo o arquivo JSON.
+2. **Compromisso de Veracidade e Anti-Confabulação:** Quando questionado se determinada análise (como *market share*, dados de concorrentes ou relatórios trimestrais) foi considerada, reporte estritamente o que foi consultado e modelado nos fatos. Nunca afirme ter conduzido análises que não foram efetivamente realizadas nas etapas de coleta.
+3. **Vedação de Leitura Pós-Escrita (Anti-Loophole):** O arquivo gerado em `valuations/` é WRITE-ONLY para o agente. É ESTRITAMENTE PROIBIDO usar ferramentas (`view_file`, `cat`, `grep`) para ler o JSON e descobrir o Preço Justo/Teto antes ou durante as interações com o usuário.
+4. **Bloqueio de Engenharia Reversa em Premissas:** A decomposição do crescimento $g_1$ e demais premissas macroeconômicas deve ser baseada **exclusivamente** na coleta de dados (IPCA projetado, PIB, relatórios setoriais), e NUNCA através de subtração reversa de uma meta ancorada. É vedada a 'confabulação matemática'.
+5. **Governança Front-Back (Single Source of Truth):** O Motor Python é a ÚNICA fonte da verdade matemática. A Calculadora Web atua primariamente como interface de leitura (Read-Only) que deve exibir os cálculos exatos processados em Python (incluindo deduções tributárias e passivos). A reatividade JS só deve ser ativada se o usuário explicitamente simular cenários alterando os inputs.

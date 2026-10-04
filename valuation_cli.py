@@ -55,6 +55,11 @@ def main():
     dcf_p.add_argument("--pct-jcp", type=float, default=0.0)
     dcf_p.add_argument("--empresa", default="")
     dcf_p.add_argument("--setor", default="")
+    dcf_p.add_argument("--historico-fcf", type=float, nargs="+", default=None, help="Histórico de FCF dos últimos anos (ex: 3700 4600 5300)")
+    dcf_p.add_argument("--cagr-historico", type=float, default=None, help="CAGR histórico de referência para teste de coerência (%%)")
+    dcf_p.add_argument("--market-share-dinamica", choices=["estavel", "ganho", "perda", "monopolio_regulado"], default=None, help="Dinâmica esperada de market share")
+    dcf_p.add_argument("--decomposicao-g1", type=float, nargs=3, metavar=("IPCA", "VOLUME", "PRICING"), default=None, help="Decomposição da taxa g1 em 3 vetores: IPCA Volume Share/Pricing")
+    dcf_p.add_argument("--analise-competitiva", default="", help="Racional competitivo ou tese de mercado")
     dcf_p.add_argument("--justificativa", default="")
     dcf_p.add_argument("--out")
 
@@ -158,6 +163,11 @@ def main():
             margem_seguranca=args.margem,
             dpa_projetado=args.dpa,
             pct_jcp=args.pct_jcp,
+            historico_fcf=args.historico_fcf,
+            cagr_historico=args.cagr_historico,
+            market_share_dinamica=args.market_share_dinamica,
+            decomposicao_g1=args.decomposicao_g1,
+            analise_competitiva=args.analise_competitiva,
             empresa=args.empresa,
             setor=args.setor,
             metadata=meta,
