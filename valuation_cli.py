@@ -81,6 +81,10 @@ def main():
     fin_p.add_argument("--setor", default="")
     fin_p.add_argument("--justificativa", default="")
     fin_p.add_argument("--out")
+    fin_p.add_argument("--ntnb", type=float, default=None, help="Taxa da NTN-B para Ke Floor")
+    fin_p.add_argument("--pdd-atual", type=float, default=None, help="Índice de Cobertura de PDD / NPL Atual")
+    fin_p.add_argument("--pdd-media-5a", type=float, default=None, help="Índice de Cobertura de PDD / NPL Média 5 anos")
+    fin_p.add_argument("--roe-10a", type=float, default=None, help="ROE médio histórico de 10 anos para Cap")
 
     # 4. HOLDING
     hld_p = subparsers.add_parser("holding", help="Valuation SOTP para Holdings (ex: Itaúsa)")
@@ -189,6 +193,10 @@ def main():
             empresa=args.empresa,
             setor=args.setor,
             metadata=meta,
+            ntnb=args.ntnb,
+            pdd_atual=args.pdd_atual,
+            pdd_media_5a=args.pdd_media_5a,
+            roe_10a=args.roe_10a,
         )
     elif args.command == "holding":
         import json

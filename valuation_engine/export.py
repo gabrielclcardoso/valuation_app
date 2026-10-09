@@ -88,6 +88,10 @@ def print_dossier_summary(resultado: Dict[str, Any], output_path: Path):
         print("• P/VP Justo Teórico derivado: [Preservado no JSON para Modo Cego]")
         print(f"• Payout Sustentável: {detalhes.get('payout_sustentavel_pct', 0):.1f}%")
         print(f"• DPA Base Projetado: R$ {detalhes.get('dpa_ano_base', 0):.4f}")
+        
+        meta_dict = detalhes.get("metadata", {})
+        if "alerta_npl" in meta_dict:
+            print(f"• ⚠ Alerta NPL: {meta_dict['alerta_npl']}")
 
     elif modelo == "sotp_holding":
         print(f"• Soma das Partes (NAV Bruto Mercado): R$ {detalhes.get('total_mercado_bruto_mi', 0):,.2f} Mi")

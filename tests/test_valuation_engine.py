@@ -289,6 +289,26 @@ class TestValuationEngine(unittest.TestCase):
         res_zero = calculate_financials_ddm(ticker="TEST", vpa=10.0, roe=3.0, ke=12.0, cresc_perp=3.0, num_acoes=100.0, payout=100.0)
         self.assertEqual(res_zero["precoJusto"], 0.0)
 
+    def test_financials_ddm_auditoria(self):
+        # Test improvements added: ntnb, pdd, roe_10a
+        res = calculate_financials_ddm(
+            ticker="TESTA",
+            vpa=10.0,
+            roe=25.0,  # should be capped to 20.0
+            ke=10.0,   # should be floored to 5.0 + 6.0 = 11.0
+            cresc_perp=5.0,
+            num_acoes=100.0,
+            margem_seguranca=20.0, # should adjust to 35.0
+            ntnb=5.0,
+            pdd_atual=50.0,
+            pdd_media_5a=100.0,
+            roe_10a=20.0
+        )
+        self.assertEqual(res["wacc"], 11.0)
+        self.assertEqual(res["margemSeguranca"], 35.0)
+        self.assertEqual(res["detalhes"]["roe_adotado_pct"], 20.0)
+        self.assertIn("alerta_npl", res["detalhes"]["metadata"])
+
     # ── Módulo SOTP Holdings ─────────────────────────────────────────────────
     def test_sotp_holding_protects_against_overvalued_subsidiary(self):
         participacoes = [

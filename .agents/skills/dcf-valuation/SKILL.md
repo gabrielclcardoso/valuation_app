@@ -177,7 +177,11 @@ python .agents/skills/dcf-valuation/scripts/calc_financials.py \
   --margem 20.0 \
   --tipo banco \
   --empresa "<NOME>" \
-  --setor "Bancos"
+  --setor "Bancos" \
+  --ntnb <TAXA_NTNB_ATUAL> \
+  --pdd-atual <COBERTURA_PDD_ATUAL> \
+  --pdd-media-5a <COBERTURA_PDD_MEDIA_5A> \
+  --roe-10a <ROE_MEDIO_10A>
 ```
 
 **3. Para Holdings (SOTP Intrínseco & Mercado):**
@@ -219,6 +223,7 @@ Após executar o script correspondente, apresente o Dossiê das Premissas no cha
 4. **Estrutura Patrimonial:** Dívida financeira líquida, quase-dívidas regulatórias/atuariais e número de ações.
 5. **Métrica Previdenciária de Bazin:** DPA adotado e confirmação de integração dos Tetos de 6% e 8% no JSON.
 6. **Caminho do Arquivo:** Informe o caminho `valuations/<TICKER>_valuation.json` pronto para ser importado na Calculadora Web.
+7. **Filtro "Zero Yield":** Verifique se o Dividend Yield projetado para o Ano 1 está abaixo da taxa Selic líquida. Se sim, force a recomendação para "Aguardar / Acumular Renda Fixa", não importando o desconto para o Preço Justo.
 
 ---
 

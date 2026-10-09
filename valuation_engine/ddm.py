@@ -23,6 +23,10 @@ def calculate_financials_ddm(
     empresa: str = "",
     setor: str = "",
     metadata: Optional[Dict[str, Any]] = None,
+    ntnb: Optional[float] = None,
+    pdd_atual: Optional[float] = None,
+    pdd_media_5a: Optional[float] = None,
+    roe_10a: Optional[float] = None,
 ) -> Dict[str, Any]:
     """Calcula o Preço Justo e Preço Teto para Bancos e Seguradoras via Gordon e DDM.
     Garante a coerência entre Payout sustentável e crescimento perpétuo (g = ROE * (1 - Payout)),
@@ -44,7 +48,26 @@ def calculate_financials_ddm(
         empresa: Nome da instituição
         setor: Setor de atuação
         metadata: Informações e premissas complementares
+        ntnb: Taxa da NTN-B para aplicar a Trava Dinâmica de Custo de Capital (Ke Floor)
+        pdd_atual: Índice de cobertura de PDD / NPL atual
+        pdd_media_5a: Média de 5 anos do Índice de cobertura de PDD / NPL
+        roe_10a: ROE médio histórico de 10 anos para o Cap de ROE Perpétuo
     """
+    if metadata is None:
+        metadata = {}
+
+    # 3 Melhorias (Auditoria):
+    if roe_10a is not None:
+        roe = min(roe, float(roe_10a))
+    
+    if ntnb is not None:
+        ke = max(ke, float(ntnb) + 6.0)
+
+    if pdd_atual is not None and pdd_media_5a is not None:
+        if float(pdd_atual) < float(pdd_media_5a):
+            margem_seguranca = max(margem_seguranca, 35.0)
+            metadata["alerta_npl"] = "Margem de segurança ajustada para >=35% devido à cobertura de PDD abaixo da média de 5 anos."
+
     ke_dec = float(ke) / 100.0
     g_perp_dec = float(cresc_perp) / 100.0
     roe_dec = float(roe) / 100.0
