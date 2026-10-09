@@ -199,6 +199,7 @@ class TestValuationEngine(unittest.TestCase):
             analise_competitiva="Triopólio de telecomunicações; ARPU em expansão",
             empresa="TIM S.A.",
             setor="Telecomunicações",
+            ifrs16_expurgado=True,
         )
         detalhes = res["detalhes"]
         self.assertIn("validacao_crescimento", detalhes)
@@ -207,6 +208,45 @@ class TestValuationEngine(unittest.TestCase):
         self.assertEqual(val["cagr_historico_pct"], 19.68)
         self.assertEqual(val["decomposicao_g1"]["g1_adotado"], 5.0)
         self.assertEqual(val["decomposicao_g1"]["soma"], 5.0)
+
+    def test_dcf_capex_minimo_historico(self):
+        # Quando capex_minimo_historico é fornecido e capex_projetado também
+        res = calculate_dcf(
+            ticker="VIVT3",
+            ebitda_al=1000.0,
+            capex_projetado=800.0,
+            capex_minimo_historico=1000.0,
+            taxas_crescimento=[4.0, 3.0],
+            wacc=12.0,
+            cresc_perp=3.0,
+            divida_liquida=2000.0,
+            num_acoes=1000.0,
+            setor="Telecomunicações",
+            ifrs16_expurgado=True,
+        )
+        detalhes = res["detalhes"]
+        self.assertEqual(detalhes["deficit_capex"], 200.0)  # 1000 - 800
+        self.assertEqual(detalhes["provisao_queima_caixa"], 1000.0)  # 200 * 5
+        self.assertAlmostEqual(
+            detalhes["enterprise_value"],
+            detalhes["enterprise_value_bruto"] - 1000.0,
+            places=2
+        )
+        
+        # Testar ValueError se capex_projetado não é fornecido
+        with self.assertRaisesRegex(ValueError, "Para usar capex_minimo_historico, é necessário informar capex_projetado"):
+            calculate_dcf(
+                ticker="VIVT3",
+                fclf_inicial=200.0,
+                capex_minimo_historico=1000.0,
+                taxas_crescimento=[4.0, 3.0],
+                wacc=12.0,
+                cresc_perp=3.0,
+                divida_liquida=2000.0,
+                num_acoes=1000.0,
+                setor="Telecomunicações",
+                ifrs16_expurgado=True,
+            )
 
     def test_dcf_invalid_shares(self):
         with self.assertRaises(ValueError):

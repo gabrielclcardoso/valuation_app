@@ -39,7 +39,9 @@ def main():
     # 2. DCF
     dcf_p = subparsers.add_parser("dcf", help="Valuation DCF por FCFF / WACC")
     dcf_p.add_argument("--ticker", required=True)
-    dcf_p.add_argument("--fclf", type=float, required=True)
+    dcf_p.add_argument("--fclf", type=float, default=None)
+    dcf_p.add_argument("--ebitda-al", type=float, default=None)
+    dcf_p.add_argument("--capex-projetado", type=float, default=None)
     dcf_p.add_argument("--taxas", type=float, nargs="+", required=True)
     dcf_p.add_argument("--wacc", type=float, required=True)
     dcf_p.add_argument("--cresc-perp", type=float, required=True)
@@ -61,6 +63,9 @@ def main():
     dcf_p.add_argument("--decomposicao-g1", type=float, nargs=3, metavar=("IPCA", "VOLUME", "PRICING"), default=None, help="Decomposição da taxa g1 em 3 vetores: IPCA Volume Share/Pricing")
     dcf_p.add_argument("--analise-competitiva", default="", help="Racional competitivo ou tese de mercado")
     dcf_p.add_argument("--justificativa", default="")
+    dcf_p.add_argument("--capex-minimo-historico", type=float, default=None, help="Parâmetro Telecom: Força queda do preço-teto (aumentando margem de segurança) caso o risco de queima de caixa seja muito alto")
+    dcf_p.add_argument("--ifrs16-expurgado", action="store_true", default=False, help="Parâmetro Telecom: Confirma que o passivo de arrendamento IFRS 16 foi expurgado da dívida para não penalizar em duplicidade")
+    dcf_p.add_argument("--teto-crescimento-oligopolio", type=float, default=None, help="Parâmetro Telecom: Força teto máximo para a taxa inicial G1 em mercados oligopolizados")
     dcf_p.add_argument("--out")
 
     # 3. FINANCIALS
@@ -154,6 +159,11 @@ def main():
         meta["justificativa"] = args.justificativa
 
     if args.command == "dcf":
+        if args.fclf is None and (args.ebitda_al is None or args.capex_projetado is None):
+            parser.error("É necessário informar --fclf OU (--ebitda-al E --capex-projetado) no modelo DCF.")
+        if args.fclf is not None and (args.ebitda_al is not None or args.capex_projetado is not None):
+            parser.error("Informe --fclf OU (--ebitda-al E --capex-projetado), não ambos.")
+
         resultado = calculate_dcf(
             ticker=args.ticker,
             fclf_inicial=args.fclf,
@@ -178,6 +188,11 @@ def main():
             empresa=args.empresa,
             setor=args.setor,
             metadata=meta,
+            capex_minimo_historico=args.capex_minimo_historico,
+            ifrs16_expurgado=args.ifrs16_expurgado,
+            teto_crescimento_oligopolio=args.teto_crescimento_oligopolio,
+            ebitda_al=args.ebitda_al,
+            capex_projetado=args.capex_projetado,
         )
     elif args.command == "financials":
         resultado = calculate_financials_ddm(

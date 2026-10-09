@@ -149,7 +149,8 @@ def validate_growth_and_market_share(
 
 def calculate_dcf(
     ticker: str,
-    fclf_inicial: float,
+    *,
+    fclf_inicial: Optional[float] = None,
     taxas_crescimento: List[float],
     wacc: float,
     cresc_perp: float,
@@ -171,6 +172,11 @@ def calculate_dcf(
     empresa: str = "",
     setor: str = "",
     metadata: Optional[Dict[str, Any]] = None,
+    capex_minimo_historico: Optional[float] = None,
+    ifrs16_expurgado: bool = False,
+    teto_crescimento_oligopolio: Optional[float] = None,
+    ebitda_al: Optional[float] = None,
+    capex_projetado: Optional[float] = None,
 ) -> Dict[str, Any]:
     """Calcula o Valuation DCF por FCFF com cenários (Base e Ajustado por Quase-Dívidas).
     
@@ -209,9 +215,41 @@ def calculate_dcf(
     if num_acoes <= 0:
         raise ValueError("O número de ações deve ser maior que zero.")
 
+    if fclf_inicial is None:
+        if ebitda_al is None or capex_projetado is None:
+            raise ValueError("É necessário informar fclf_inicial ou (ebitda_al e capex_projetado).")
+        fclf_inicial = float(ebitda_al) - float(capex_projetado)
+
     # Validação contra projeção infinita de fluxos negativos
     if fclf_inicial < 0:
         raise ValueError(f"O FCFF do ano-base não pode ser negativo (R$ {fclf_inicial} Mi) para projeção da taxa de crescimento 'g'. A normalização prévia do fluxo inicial é obrigatória.")
+
+    # Telecom Safety Parameters: Teto de Crescimento
+    if teto_crescimento_oligopolio is not None and market_share_dinamica == 'estavel':
+        if taxas_crescimento and taxas_crescimento[0] > teto_crescimento_oligopolio:
+            raise ValueError(
+                f"Taxa de crescimento inicial (g1={taxas_crescimento[0]}%) supera o teto de oligopólio ({teto_crescimento_oligopolio}%). "
+                "Crescimento em Telecom (oligopólio maduro) exige ganho agressivo e documentado de ARPU. "
+                "Reduza a taxa G1 ou altere o teto."
+            )
+
+    # Telecom Safety Parameters: Tratamento de Arrendamentos IFRS 16
+    is_telecom = setor.lower() in ['telecom', 'telecomunicações', 'telecomunicacoes'] or ticker.upper().startswith(('VIVT', 'TIMS', 'OIBR'))
+    if is_telecom and not ifrs16_expurgado:
+        raise ValueError(
+            "Para empresas de Telecomunicações, é obrigatório confirmar o expurgo do IFRS 16 da Dívida Financeira "
+            "passando a flag --ifrs16-expurgado. Isso evita dupla penalização (considerando passivo de arrendamento "
+            "como dívida ao mesmo tempo em que já reduz o FCF via EBITDA-AL)."
+        )
+
+    # Telecom Safety Parameters: Risco de CapEx
+    deficit_capex = 0.0
+    provisao_queima_caixa = 0.0
+    if capex_minimo_historico is not None:
+        if capex_projetado is None:
+            raise ValueError("Para usar capex_minimo_historico, é necessário informar capex_projetado (e ebitda_al).")
+        deficit_capex = max(0.0, float(capex_minimo_historico) - float(capex_projetado))
+        provisao_queima_caixa = deficit_capex * 5.0
 
     # 1. Projeção dos fluxos explícitos
     fcf_atual = float(fclf_inicial)
@@ -238,7 +276,8 @@ def calculate_dcf(
     vp_terminal = valor_terminal / ((1.0 + wacc_dec) ** len(taxas_crescimento))
 
     # 3. Enterprise Value
-    enterprise_value = soma_pv + vp_terminal
+    enterprise_value_bruto = soma_pv + vp_terminal
+    enterprise_value = enterprise_value_bruto - provisao_queima_caixa
 
     # 4. Estrutura de Dívida e Quase-Dívidas com Benefício Fiscal
     divida_fin_liq = float(divida_liquida)
@@ -313,6 +352,12 @@ def calculate_dcf(
         meta["empresa"] = empresa
     if setor:
         meta["setor"] = setor
+    if ifrs16_expurgado:
+        meta["ifrs16_expurgado"] = True
+    if capex_minimo_historico is not None:
+        meta["capex_minimo_historico_penalidade_aplicada"] = True
+    if teto_crescimento_oligopolio is not None:
+        meta["teto_crescimento_oligopolio_aplicado"] = teto_crescimento_oligopolio
 
     return {
         "ticker": ticker.upper(),
@@ -333,6 +378,9 @@ def calculate_dcf(
             "fcf_ano_terminal": round(fcf_terminal, 2),
             "valor_terminal_bruto": round(valor_terminal, 2),
             "vp_terminal": round(vp_terminal, 2),
+            "deficit_capex": round(deficit_capex, 2),
+            "provisao_queima_caixa": round(provisao_queima_caixa, 2),
+            "enterprise_value_bruto": round(enterprise_value_bruto, 2),
             "enterprise_value": round(enterprise_value, 2),
             "equity_value": round(equity_value_final, 2),
             "divida_financeira_liquida": round(divida_fin_liq, 2),
