@@ -27,6 +27,9 @@ def calculate_financials_ddm(
     pdd_atual: Optional[float] = None,
     pdd_media_5a: Optional[float] = None,
     roe_10a: Optional[float] = None,
+    sinistralidade_atual: Optional[float] = None,
+    sinistralidade_media_5a: Optional[float] = None,
+    prazo_acordo_anos: Optional[float] = None,
 ) -> Dict[str, Any]:
     """Calcula o Preço Justo e Preço Teto para Bancos e Seguradoras via Gordon e DDM.
     Garante a coerência entre Payout sustentável e crescimento perpétuo (g = ROE * (1 - Payout)),
@@ -67,6 +70,21 @@ def calculate_financials_ddm(
         if float(pdd_atual) < float(pdd_media_5a):
             margem_seguranca = max(margem_seguranca, 35.0)
             metadata["alerta_npl"] = "Margem de segurança ajustada para >=35% devido à cobertura de PDD abaixo da média de 5 anos."
+
+    if tipo == "seguradora":
+        if sinistralidade_atual is not None and sinistralidade_media_5a is not None:
+            if float(sinistralidade_atual) < 0 or float(sinistralidade_media_5a) < 0:
+                raise ValueError("A sinistralidade não pode ser negativa.")
+            if float(sinistralidade_atual) > float(sinistralidade_media_5a):
+                margem_seguranca = max(margem_seguranca, 35.0)
+                metadata["alerta_sinistralidade"] = "Margem de segurança ajustada para >=35% devido à sinistralidade atual acima da média de 5 anos."
+        
+        if prazo_acordo_anos is not None:
+            if float(prazo_acordo_anos) < 0:
+                raise ValueError("O prazo do acordo não pode ser negativo.")
+            if float(prazo_acordo_anos) < 10.0:
+                margem_seguranca = max(margem_seguranca, 40.0)
+                metadata["alerta_prazo_acordo"] = "Margem de segurança ajustada para >=40% devido ao prazo do acordo de balcão < 10 anos."
 
     ke_dec = float(ke) / 100.0
     g_perp_dec = float(cresc_perp) / 100.0

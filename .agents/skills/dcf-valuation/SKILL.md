@@ -165,6 +165,7 @@ python .agents/skills/dcf-valuation/scripts/calc_dcf.py \
 ```
 
 **2. Para Bancos e Seguradoras (Gordon & DDM):**
+*Para Bancos:*
 ```bash
 python .agents/skills/dcf-valuation/scripts/calc_financials.py \
   --ticker <TICKER> \
@@ -182,6 +183,27 @@ python .agents/skills/dcf-valuation/scripts/calc_financials.py \
   --pdd-atual <COBERTURA_PDD_ATUAL> \
   --pdd-media-5a <COBERTURA_PDD_MEDIA_5A> \
   --roe-10a <ROE_MEDIO_10A>
+```
+
+*Para Seguradoras / Bancassurance:*
+```bash
+python .agents/skills/dcf-valuation/scripts/calc_financials.py \
+  --ticker <TICKER> \
+  --vpa <VPA_REAIS> \
+  --roe <ROE_PCT> \
+  --ke <KE_PCT> \
+  --cresc-perp <G_PERP_PCT> \
+  --payout <PAYOUT_PCT> \
+  --num-acoes <ACOES_MI> \
+  --margem 20.0 \
+  --tipo seguradora \
+  --empresa "<NOME>" \
+  --setor "Seguros" \
+  --ntnb <TAXA_NTNB_ATUAL> \
+  --roe-10a <ROE_MEDIO_10A> \
+  --sinistralidade-atual <SINISTRALIDADE_ATUAL_PCT> \
+  --sinistralidade-media-5a <SINISTRALIDADE_MEDIA_5A_PCT> \
+  --prazo-acordo-anos <PRAZO_ACORDO_ANOS>
 ```
 
 **3. Para Holdings (SOTP Intrínseco & Mercado):**

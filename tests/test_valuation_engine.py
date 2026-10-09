@@ -309,6 +309,38 @@ class TestValuationEngine(unittest.TestCase):
         self.assertEqual(res["detalhes"]["roe_adotado_pct"], 20.0)
         self.assertIn("alerta_npl", res["detalhes"]["metadata"])
 
+    def test_financials_ddm_seguradora_constraints(self):
+        # Triggering both sinistralidade and prazo_acordo_anos rules
+        res = calculate_financials_ddm(
+            ticker="BBSE3",
+            vpa=10.0,
+            roe=20.0,
+            ke=12.0,
+            cresc_perp=4.0,
+            num_acoes=100.0,
+            margem_seguranca=20.0,
+            tipo="seguradora",
+            sinistralidade_atual=80.0,
+            sinistralidade_media_5a=70.0,
+            prazo_acordo_anos=5.0
+        )
+        self.assertEqual(res["margemSeguranca"], 40.0)
+        self.assertIn("alerta_sinistralidade", res["detalhes"]["metadata"])
+        self.assertIn("alerta_prazo_acordo", res["detalhes"]["metadata"])
+        
+        # Test negative inputs validation
+        with self.assertRaisesRegex(ValueError, "sinistralidade não pode ser negativa"):
+            calculate_financials_ddm(
+                ticker="BBSE3", vpa=10.0, roe=20.0, ke=12.0, cresc_perp=4.0, num_acoes=100.0,
+                tipo="seguradora", sinistralidade_atual=-5.0, sinistralidade_media_5a=70.0
+            )
+        
+        with self.assertRaisesRegex(ValueError, "prazo do acordo não pode ser negativo"):
+            calculate_financials_ddm(
+                ticker="BBSE3", vpa=10.0, roe=20.0, ke=12.0, cresc_perp=4.0, num_acoes=100.0,
+                tipo="seguradora", prazo_acordo_anos=-2.0
+            )
+
     # ── Módulo SOTP Holdings ─────────────────────────────────────────────────
     def test_sotp_holding_protects_against_overvalued_subsidiary(self):
         participacoes = [

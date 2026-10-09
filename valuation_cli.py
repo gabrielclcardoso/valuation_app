@@ -85,6 +85,9 @@ def main():
     fin_p.add_argument("--pdd-atual", type=float, default=None, help="Índice de Cobertura de PDD / NPL Atual")
     fin_p.add_argument("--pdd-media-5a", type=float, default=None, help="Índice de Cobertura de PDD / NPL Média 5 anos")
     fin_p.add_argument("--roe-10a", type=float, default=None, help="ROE médio histórico de 10 anos para Cap")
+    fin_p.add_argument("--sinistralidade-atual", type=float, default=None, help="Sinistralidade atual (Apenas Seguradoras)")
+    fin_p.add_argument("--sinistralidade-media-5a", type=float, default=None, help="Sinistralidade média de 5 anos (Apenas Seguradoras)")
+    fin_p.add_argument("--prazo-acordo-anos", type=float, default=None, help="Prazo restante do acordo de balcão bancassurance em anos (Apenas Seguradoras)")
 
     # 4. HOLDING
     hld_p = subparsers.add_parser("holding", help="Valuation SOTP para Holdings (ex: Itaúsa)")
@@ -197,6 +200,9 @@ def main():
             pdd_atual=args.pdd_atual,
             pdd_media_5a=args.pdd_media_5a,
             roe_10a=args.roe_10a,
+            sinistralidade_atual=args.sinistralidade_atual,
+            sinistralidade_media_5a=args.sinistralidade_media_5a,
+            prazo_acordo_anos=args.prazo_acordo_anos,
         )
     elif args.command == "holding":
         import json

@@ -92,6 +92,10 @@ def print_dossier_summary(resultado: Dict[str, Any], output_path: Path):
         meta_dict = detalhes.get("metadata", {})
         if "alerta_npl" in meta_dict:
             print(f"• ⚠ Alerta NPL: {meta_dict['alerta_npl']}")
+        if "alerta_sinistralidade" in meta_dict:
+            print(f"• ⚠ Alerta Sinistralidade: {meta_dict['alerta_sinistralidade']}")
+        if "alerta_prazo_acordo" in meta_dict:
+            print(f"• ⚠ Alerta Prazo de Acordo: {meta_dict['alerta_prazo_acordo']}")
 
     elif modelo == "sotp_holding":
         print(f"• Soma das Partes (NAV Bruto Mercado): R$ {detalhes.get('total_mercado_bruto_mi', 0):,.2f} Mi")
