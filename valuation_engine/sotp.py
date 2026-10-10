@@ -20,6 +20,7 @@ def calculate_sotp_holding(
     empresa: str = "Itaúsa",
     setor: str = "Holding Financeira / Conglomerado",
     metadata: Optional[Dict[str, Any]] = None,
+    ntnb: float = 6.0,
 ) -> Dict[str, Any]:
     """Calcula o Valuation SOTP Intrínseco e de Mercado para Holdings.
     
@@ -43,7 +44,10 @@ def calculate_sotp_holding(
         empresa: Nome corporativo
         setor: Setor
         metadata: Premissas e justificativas adicionais
+        ntnb: Taxa da NTN-B para ancoragem de risco (Custo de Capital)
     """
+    ke_holding = max(float(ke_holding), float(ntnb) + 5.0)
+
     if num_acoes_holding <= 0:
         raise ValueError("O número de ações da holding deve ser maior que zero.")
     if not participacoes:

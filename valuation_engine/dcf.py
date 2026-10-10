@@ -160,7 +160,7 @@ def calculate_dcf(
     passivos_contingentes: float = 0.0,
     passivos_regulatorios: Optional[float] = None,
     aliquota_ir_csll: float = 34.0,
-    quase_divida_dedutivel: bool = False,
+    pct_contingencia_dedutivel: float = 0.0,
     margem_seguranca: float = 20.0,
     dpa_projetado: float = 0.0,
     pct_jcp: float = 0.0,
@@ -177,6 +177,7 @@ def calculate_dcf(
     teto_crescimento_oligopolio: Optional[float] = None,
     ebitda_al: Optional[float] = None,
     capex_projetado: Optional[float] = None,
+    ntnb: float = 6.0,
 ) -> Dict[str, Any]:
     """Calcula o Valuation DCF por FCFF com cenários (Base e Ajustado por Quase-Dívidas).
     
@@ -205,6 +206,9 @@ def calculate_dcf(
         setor: Setor de atuação
         metadata: Dicionário adicional com memórias de cálculo e justificativas
     """
+    wacc = max(float(wacc), float(ntnb) + 4.0)
+    cresc_perp = min(float(cresc_perp), 4.5)
+
     wacc_dec = float(wacc) / 100.0
     g_perp_dec = float(cresc_perp) / 100.0
 
@@ -216,9 +220,7 @@ def calculate_dcf(
         raise ValueError("O número de ações deve ser maior que zero.")
 
     if fclf_inicial is None:
-        if ebitda_al is None or capex_projetado is None:
-            raise ValueError("É necessário informar fclf_inicial ou (ebitda_al e capex_projetado).")
-        fclf_inicial = float(ebitda_al) - float(capex_projetado)
+        raise ValueError("A inserção estrita do fclf_inicial (FCFF) é obrigatória. Não é permitido derivar o fluxo usando apenas EBITDA isolado.")
 
     # Validação contra projeção infinita de fluxos negativos
     if fclf_inicial < 0:
@@ -288,19 +290,24 @@ def calculate_dcf(
     if passivos_regulatorios is not None:
         regulatorio = float(passivos_regulatorios)
     else:
-        regulatorio = float(outros_passivos) if not quase_divida_dedutivel else 0.0
+        regulatorio = float(outros_passivos) if pct_contingencia_dedutivel == 0.0 else 0.0
 
     # Passivos contingentes e atuariais (previdência/processos cíveis/trabalhistas/tributários dedutíveis)
     if passivos_contingentes > 0:
         contingentes_bruto = float(passivos_contingentes)
-    elif quase_divida_dedutivel and outros_passivos != 0.0:
+    elif pct_contingencia_dedutivel > 0.0 and outros_passivos != 0.0:
         contingentes_bruto = float(outros_passivos)
     else:
         contingentes_bruto = 0.0
 
-    # Quase-dívidas contingentes deduzidas líquidas de impostos (34% IRPJ/CSLL)
-    contingentes_liquidos = contingentes_bruto * (1.0 - tax_rate)
-    beneficio_fiscal_quase_divida = contingentes_bruto - contingentes_liquidos
+    # Benefício fiscal sobre contingências: incide apenas sobre a parcela dedutível
+    pct_dedutivel = float(pct_contingencia_dedutivel) / 100.0
+    contingentes_dedutiveis = contingentes_bruto * pct_dedutivel
+    contingentes_nao_dedutiveis = contingentes_bruto - contingentes_dedutiveis
+    
+    contingentes_liquidos_dedutiveis = contingentes_dedutiveis * (1.0 - tax_rate)
+    contingentes_liquidos = contingentes_liquidos_dedutiveis + contingentes_nao_dedutiveis
+    beneficio_fiscal_quase_divida = contingentes_dedutiveis - contingentes_liquidos_dedutiveis
 
     # Passivo regulatório negativo é tratado como ATIVO regulatório (adiciona ao valor ou reduz dívida)
     divida_total_ajustada = divida_fin_liq + contingentes_liquidos + regulatorio

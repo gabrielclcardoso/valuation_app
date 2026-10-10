@@ -16,7 +16,8 @@ def calculate_operadora_saude(
     receita_liquida: float,
     sinistralidade_mlr_pct: float,
     despesas_adm_comerciais_pct: float,
-    resultado_financeiro: float,
+    ganhos_float: float,
+    despesas_juros_fixa: float,
     aliquota_ir_csll_pct: float = 34.0,
     exigencia_capital_ans_pct: float = 10.0,
     payout_sustentavel_pct: float = 60.0,
@@ -30,6 +31,7 @@ def calculate_operadora_saude(
     empresa: str = "BradSaúde",
     setor: str = "Saúde Suplementar / Operadora ANS",
     metadata: Optional[Dict[str, Any]] = None,
+    ntnb: float = 6.0,
 ) -> Dict[str, Any]:
     """Calcula o Valuation para Operadoras de Planos de Saúde considerando regulação da ANS (RN 569/2022).
     A retenção de capital é estritamente vinculada à variação do capital regulatório exigido
@@ -41,7 +43,8 @@ def calculate_operadora_saude(
         receita_liquida: Receita Líquida anual (contraprestações dos beneficiários) em R$ Mi
         sinistralidade_mlr_pct: Índice de sinistralidade médica (Eventos / Receita Líquida %)
         despesas_adm_comerciais_pct: Despesas administrativas e comerciais sobre a receita (%)
-        resultado_financeiro: Resultado financeiro líquido gerado pelo float das reservas técnicas (R$ Mi)
+        ganhos_float: Ganhos obtidos com o float das reservas técnicas (variáveis com a receita) em R$ Mi
+        despesas_juros_fixa: Despesas de juros (flat) em R$ Mi
         aliquota_ir_csll_pct: Alíquota efetiva de tributação (%)
         exigencia_capital_ans_pct: Fator de capital regulatório requerido pela expansão da operação k (RN 569/2022) (%)
         payout_sustentavel_pct: Payout dos lucros distribuíveis após recompor exigência da ANS (%)
@@ -56,6 +59,9 @@ def calculate_operadora_saude(
         setor: Setor
         metadata: Premissas complementares
     """
+    ke = max(float(ke), float(ntnb) + 5.0)
+    cresc_perp = min(float(cresc_perp), 4.5)
+
     ke_dec = float(ke) / 100.0
     g_perp_dec = float(cresc_perp) / 100.0
 
@@ -68,7 +74,11 @@ def calculate_operadora_saude(
     mlr_dec = float(sinistralidade_mlr_pct) / 100.0
     desp_dec = float(despesas_adm_comerciais_pct) / 100.0
     margem_op_dec = 1.0 - mlr_dec - desp_dec
-    rf_base = float(resultado_financeiro)
+    
+    ganhos_float_base = float(ganhos_float)
+    juros_base = float(despesas_juros_fixa)
+    rf_base = ganhos_float_base - juros_base
+    
     ir_dec = float(aliquota_ir_csll_pct) / 100.0
     k_ans_dec = float(exigencia_capital_ans_pct) / 100.0
     payout_dec = float(payout_sustentavel_pct) / 100.0
@@ -101,7 +111,8 @@ def calculate_operadora_saude(
         retencao_ans_t = delta_rec_t * k_ans_dec
 
         ebit_t = rec_t * margem_op_dec
-        rf_t = rf_base * (rec_t / rec_base) if rec_base > 0 else rf_base
+        ganhos_float_t = ganhos_float_base * (rec_t / rec_base) if rec_base > 0 else ganhos_float_base
+        rf_t = ganhos_float_t - juros_base
         lair_t = ebit_t + rf_t
         ir_t = max(0.0, lair_t * ir_dec)
         lucro_t = lair_t - ir_t
@@ -131,7 +142,8 @@ def calculate_operadora_saude(
     retencao_ans_term = delta_rec_term * k_ans_dec
 
     ebit_term = rec_term * margem_op_dec
-    rf_term = rf_base * (rec_term / rec_base) if rec_base > 0 else rf_base
+    ganhos_float_term = ganhos_float_base * (rec_term / rec_base) if rec_base > 0 else ganhos_float_base
+    rf_term = ganhos_float_term - juros_base
     lair_term = ebit_term + rf_term
     ir_term = max(0.0, lair_term * ir_dec)
     lucro_term = lair_term - ir_term
@@ -182,7 +194,9 @@ def calculate_operadora_saude(
             "sinistralidade_mlr_pct": round(float(sinistralidade_mlr_pct), 2),
             "despesas_adm_comerciais_pct": round(float(despesas_adm_comerciais_pct), 2),
             "fator_capital_ans_k_pct": round(float(exigencia_capital_ans_pct), 2),
-            "resultado_financeiro_float_mi": round(rf_base, 2),
+            "ganhos_float_mi": round(ganhos_float_base, 2),
+            "despesas_juros_fixa_mi": round(juros_base, 2),
+            "resultado_financeiro_liquido_mi": round(rf_base, 2),
             "lucro_liquido_projetado_mi": round(lucro_liq_base, 2),
             "retencao_reserva_solvencia_ans_mi": round(retencao_ans_base, 2),
             "lucro_distribuivel_mi": round(lucro_dist_base, 2),

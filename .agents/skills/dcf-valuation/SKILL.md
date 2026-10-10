@@ -36,23 +36,25 @@ flowchart TD
   * Holdings (ITSA4, BRAP4, SIMH3).
   * *Fundamento Anti-Bolha:* Para evitar herdar eventuais cotações de mercado infladas das controladas (ex: se Itaú estiver caro na bolsa), o modelo calcula tanto o **SOTP a Valor de Mercado** quanto o **SOTP a Valor Intrínseco** (utilizando o Preço Justo fundamentalista calculado para a investida).
 * **Fluxo D — DDM Regulatório ANS (`calc_saude.py`):**
-  * Operadoras de Planos de Saúde com provisões técnicas (BradSaúde/SAUD3, HAPV3, ODPV3).
+  * Operadoras de Planos de Saúde puras com provisões técnicas (BradSaúde/SAUD3, ODPV3).
+  * *Atenção:* Operadoras verticalizadas (com hospitais próprios, ex: HAPV3) são PROIBIDAS de usar o Fluxo D. Elas devem obrigatoriamente usar o Fluxo A (DCF por FCFF) para capturar o impacto real do CapEx físico e da depreciação no fluxo de caixa.
   * *Fundamento:* Calibra a Sinistralidade Médica (MLR), o rendimento do *float* das provisões técnicas e a retenção de lucros exigida pela Margem de Solvência da ANS.
 
 ---
 
 ## 📋 As 4 Fases de Execução (Rigor Metodológico)
 
-### Fase 1: Coleta Bruta (Isolando Fatos)
+### Fase 1: Coleta Bruta e Pre-Flight Checklist (Isolando Fatos)
 
 > [!WARNING]
-> **REGRA DE ATUALIDADE TEMPORAL (ANTI-DESATUALIZAÇÃO):**
+> **REGRA DE ATUALIDADE TEMPORAL E CHECKLIST OBRIGATÓRIO (ANTI-DESATUALIZAÇÃO):**
 > * **Verifique o ano civil atual antes de pesquisar:** Execute `date` ou leia a metadata do sistema.
 > * **NUNCA chumbe anos passados nas buscas iniciais** (ex: NUNCA pesquise termos fixos como `"DFP 2024"` ou `"4T24"` antes de saber o ano corrente).
 > * **Acesse primeiro a Central de Resultados oficial:**
 >   Faça buscas como `site:ri.<empresa>.com.br "Central de Resultados"` ou `site:cvm.gov.br "<empresa>" "DFP"`.
 > * **Posição Patrimonial Recente:** Para Caixa e Dívida, utilize o último balanço trimestral (ITR) disponível.
 > * **Prioridade da pasta `reports/`:** Se o usuário colocar um relatório na pasta `reports/`, utilize esse documento como fonte primária da verdade.
+> * **[OBRIGATÓRIO] PRE-FLIGHT CHECKLIST DE EVIDÊNCIA:** Antes de executar qualquer script Python da CLI, você DEVE imprimir no chat um bloco chamado "Evidência de Recência", listando: a URL ou o número do protocolo da CVM consultado, o Ano Base do FCFF, e o Trimestre do ITR utilizado. O script exigirá esses dados via `--ano-base` e `--trimestre-itr`.
 
 #### 1.1 Levantamento Histórico Obrigatório (3 a 5 Anos - Anti-Distorção de Base):
 * Colete a série histórica de **Receita Líquida, EBITDA e Fluxo de Caixa Livre ($OpFCF = \text{EBITDA-AL} - \text{CapEx}$ ou $FCO - \text{CapEx}$)** dos últimos 3 exercícios fechados.
@@ -117,7 +119,7 @@ Para evitar arbitrariedade nas taxas projetadas ($g_1 \dots g_5$), aplique o tri
 #### Para Fluxo D (Operadoras de Saúde ANS):
 1. **Receita Líquida:** Contraprestações emitidas de planos de saúde.
 2. **MLR (Sinistralidade Médica %):** Eventos indenizáveis / Receita Líquida.
-3. **Resultado Financeiro:** Ganhos obtidos com o *float* das reservas técnicas. **ATENÇÃO:** O parâmetro `--res-financeiro` deve ser o resultado financeiro LÍQUIDO (Ganhos do Float menos Despesas de Juros da Dívida). Como o DDM/FCFE não deduz a Dívida Líquida no final, o peso da alavancagem deve estar precificado no lucro distribuível base.
+3. **Resultado Financeiro:** Separado em duas variáveis essenciais: `--ganhos-float` (rendimento do *float* das reservas técnicas, que escala com a receita) e `--despesas-juros-fixa` (juros da dívida, que permanecem flat). O motor projeta as duas dinâmicas separadamente.
 4. **Retenção para Margem de Solvência da ANS (%):** Capital regulatório retido.
 5. **Custo de Capital Próprio ($K_e$).**
 
@@ -125,7 +127,7 @@ Para evitar arbitrariedade nas taxas projetadas ($g_1 \dots g_5$), aplique o tri
 
 ### Fase 3: Parâmetros Macroeconômicos Padronizados (WACC / Ke)
 
-* **Taxa Livre de Risco Real ($R_{f,\text{real}}$):** ETTJ Tesouro IPCA+ (NTN-B) de referência longa (10 a 20 anos).
+* **Taxa Livre de Risco Real ($R_{f,\text{real}}$):** ETTJ Tesouro IPCA+ (NTN-B) com vencimento de **10 anos** (ex: Tesouro IPCA+ 2035). O uso desta maturidade específica é OBRIGATÓRIO para garantir consistência comparativa entre todos os valuations da carteira.
 * **Inflação Esperada:** Mediana do Relatório Focus (Meta de Inflação de longo prazo).
 * **Equity Risk Premium (ERP Brasil):** Entre 5,0% e 6,5%.
 * **Spread de Governança / Risco Estatal:** Adicionar de 0,5% a 1,5% para empresas de controle estatal.
@@ -144,7 +146,11 @@ Para evitar arbitrariedade nas taxas projetadas ($g_1 \dots g_5$), aplique o tri
 
 **1. Para Concessões, Utilities e Indústria (DCF com Triângulo de Crescimento):**
 ```bash
-python .agents/skills/dcf-valuation/scripts/calc_dcf.py \
+python valuation_cli.py \
+  --ano-base <ANO_BASE_DFP> \
+  --trimestre-itr <TRIMESTRE_ITR> \
+  --ntnb <TAXA_NTNB_ATUAL> \
+  dcf \
   --ticker <TICKER> \
   --fclf <FCFF_INICIAL_MI> \
   --taxas <G1> <G2> <G3> <G4> <G5> \
@@ -152,6 +158,7 @@ python .agents/skills/dcf-valuation/scripts/calc_dcf.py \
   --cresc-perp <G_PERP_PCT> \
   --divida-liq <DIVIDA_FINANCEIRA_LIQ_MI> \
   --passivos-contingentes <PASSIVOS_DEDUTIVEIS_MI> \
+  --pct-contingencia-dedutivel <PCT_DEDUTIVEL> \
   --num-acoes <ACOES_MI> \
   --margem 20.0 \
   --dpa <DPA_PROJETADO> \
@@ -167,7 +174,11 @@ python .agents/skills/dcf-valuation/scripts/calc_dcf.py \
 **2. Para Bancos e Seguradoras (Gordon & DDM):**
 *Para Bancos:*
 ```bash
-python .agents/skills/dcf-valuation/scripts/calc_financials.py \
+python valuation_cli.py \
+  --ano-base <ANO_BASE_DFP> \
+  --trimestre-itr <TRIMESTRE_ITR> \
+  --ntnb <TAXA_NTNB_ATUAL> \
+  financials \
   --ticker <TICKER> \
   --vpa <VPA_REAIS> \
   --roe <ROE_PCT> \
@@ -179,7 +190,6 @@ python .agents/skills/dcf-valuation/scripts/calc_financials.py \
   --tipo banco \
   --empresa "<NOME>" \
   --setor "Bancos" \
-  --ntnb <TAXA_NTNB_ATUAL> \
   --pdd-atual <COBERTURA_PDD_ATUAL> \
   --pdd-media-5a <COBERTURA_PDD_MEDIA_5A> \
   --roe-10a <ROE_MEDIO_10A>
@@ -187,7 +197,11 @@ python .agents/skills/dcf-valuation/scripts/calc_financials.py \
 
 *Para Seguradoras / Bancassurance:*
 ```bash
-python .agents/skills/dcf-valuation/scripts/calc_financials.py \
+python valuation_cli.py \
+  --ano-base <ANO_BASE_DFP> \
+  --trimestre-itr <TRIMESTRE_ITR> \
+  --ntnb <TAXA_NTNB_ATUAL> \
+  financials \
   --ticker <TICKER> \
   --vpa <VPA_REAIS> \
   --roe <ROE_PCT> \
@@ -199,7 +213,6 @@ python .agents/skills/dcf-valuation/scripts/calc_financials.py \
   --tipo seguradora \
   --empresa "<NOME>" \
   --setor "Seguros" \
-  --ntnb <TAXA_NTNB_ATUAL> \
   --roe-10a <ROE_MEDIO_10A> \
   --sinistralidade-atual <SINISTRALIDADE_ATUAL_PCT> \
   --sinistralidade-media-5a <SINISTRALIDADE_MEDIA_5A_PCT> \
@@ -208,7 +221,11 @@ python .agents/skills/dcf-valuation/scripts/calc_financials.py \
 
 **3. Para Holdings (SOTP Intrínseco & Mercado):**
 ```bash
-python .agents/skills/dcf-valuation/scripts/calc_holding.py \
+python valuation_cli.py \
+  --ano-base <ANO_BASE_DFP> \
+  --trimestre-itr <TRIMESTRE_ITR> \
+  --ntnb <TAXA_NTNB_ATUAL> \
+  holding \
   --ticker ITSA4 \
   --itub-acoes 3500.0 \
   --itub-preco-mercado <COTACAO_ITUB> \
@@ -225,10 +242,16 @@ python .agents/skills/dcf-valuation/scripts/calc_holding.py \
 
 **4. Para Operadoras de Saúde ANS:**
 ```bash
-python .agents/skills/dcf-valuation/scripts/calc_saude.py \
+python valuation_cli.py \
+  --ano-base <ANO_BASE_DFP> \
+  --trimestre-itr <TRIMESTRE_ITR> \
+  --ntnb <TAXA_NTNB_ATUAL> \
+  saude \
   --ticker <TICKER> \
   --receita <RECEITA_MI> \
   --mlr <SINISTRALIDADE_PCT> \
+  --ganhos-float <FLOAT_MI> \
+  --despesas-juros-fixa <JUROS_MI> \
   --ke <KE_PCT> \
   --cresc-perp <G_PERP_PCT> \
   --num-acoes <ACOES_MI> \

@@ -29,6 +29,12 @@ from valuation_engine import (
 
 def main():
     parser = argparse.ArgumentParser(description="Valuation Engine B3 - CLI Unificado")
+    
+    # Argumentos globais de recência (Auditoria de Dados) e Risco
+    parser.add_argument("--ano-base", type=int, default=None, help="Ano base do balanço (DFP) utilizado. Ex: 2025")
+    parser.add_argument("--trimestre-itr", type=int, default=None, help="Trimestre do balanço (ITR) utilizado para Dívida/Caixa. Ex: 3 para 3T25")
+    parser.add_argument("--ntnb", type=float, required=True, help="Taxa da NTN-B para ancoragem de risco (Custo de Capital)")
+    
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # 1. ROUTE
@@ -50,7 +56,7 @@ def main():
     dcf_p.add_argument("--passivos-contingentes", type=float, default=0.0)
     dcf_p.add_argument("--passivos-regulatorios", type=float, default=None)
     dcf_p.add_argument("--aliquota-ir", type=float, default=34.0)
-    dcf_p.add_argument("--quase-divida-dedutivel", action="store_true", default=False)
+    dcf_p.add_argument("--pct-contingencia-dedutivel", type=float, default=0.0)
     dcf_p.add_argument("--num-acoes", type=float, required=True)
     dcf_p.add_argument("--margem", type=float, default=20.0)
     dcf_p.add_argument("--dpa", type=float, default=0.0)
@@ -86,7 +92,6 @@ def main():
     fin_p.add_argument("--setor", default="")
     fin_p.add_argument("--justificativa", default="")
     fin_p.add_argument("--out")
-    fin_p.add_argument("--ntnb", type=float, default=None, help="Taxa da NTN-B para Ke Floor")
     fin_p.add_argument("--pdd-atual", type=float, default=None, help="Índice de Cobertura de PDD / NPL Atual")
     fin_p.add_argument("--pdd-media-5a", type=float, default=None, help="Índice de Cobertura de PDD / NPL Média 5 anos")
     fin_p.add_argument("--roe-10a", type=float, default=None, help="ROE médio histórico de 10 anos para Cap")
@@ -124,7 +129,8 @@ def main():
     sau_p.add_argument("--receita", type=float, required=True)
     sau_p.add_argument("--mlr", type=float, required=True)
     sau_p.add_argument("--despesas-op", type=float, default=12.0)
-    sau_p.add_argument("--res-financeiro", type=float, default=0.0)
+    sau_p.add_argument("--ganhos-float", type=float, required=True)
+    sau_p.add_argument("--despesas-juros-fixa", type=float, required=True)
     sau_p.add_argument("--aliquota-ir", type=float, default=34.0)
     sau_p.add_argument("--retencao-ans", type=float, default=10.0)
     sau_p.add_argument("--payout", type=float, default=60.0)
@@ -154,9 +160,28 @@ def main():
         print("=" * 60 + "\n")
         return
 
+    # AUDITORIA DE RECÊNCIA DOS DADOS (TRAVA ANTI-PREGUIÇA DA IA)
+    import datetime
+    ano_atual = datetime.datetime.now().year
+    
+    if args.ano_base is None or args.trimestre_itr is None:
+        parser.error(
+            "TRAVA DE SEGURANÇA: É obrigatório informar o '--ano-base' e o '--trimestre-itr'. "
+            "Isso garante que o agente coletou os balanços mais recentes. "
+            "Exemplo: --ano-base 2025 --trimestre-itr 3"
+        )
+        
+    if ano_atual - args.ano_base > 1:
+        parser.error(
+            f"TRAVA DE SEGURANÇA: Dados defasados! O ano base ({args.ano_base}) é velho demais "
+            f"para o ano atual ({ano_atual}). Vá pesquisar o DFP/ITR mais recente na CVM ou RI da empresa!"
+        )
+
     meta = {}
     if getattr(args, "justificativa", None):
         meta["justificativa"] = args.justificativa
+    meta["ano_base_auditado"] = args.ano_base
+    meta["trimestre_itr_auditado"] = args.trimestre_itr
 
     if args.command == "dcf":
         if args.fclf is None and (args.ebitda_al is None or args.capex_projetado is None):
@@ -176,7 +201,7 @@ def main():
             passivos_contingentes=args.passivos_contingentes,
             passivos_regulatorios=args.passivos_regulatorios,
             aliquota_ir_csll=args.aliquota_ir,
-            quase_divida_dedutivel=args.quase_divida_dedutivel,
+            pct_contingencia_dedutivel=args.pct_contingencia_dedutivel,
             margem_seguranca=args.margem,
             dpa_projetado=args.dpa,
             pct_jcp=args.pct_jcp,
@@ -193,6 +218,7 @@ def main():
             teto_crescimento_oligopolio=args.teto_crescimento_oligopolio,
             ebitda_al=args.ebitda_al,
             capex_projetado=args.capex_projetado,
+            ntnb=args.ntnb,
         )
     elif args.command == "financials":
         resultado = calculate_financials_ddm(
@@ -266,7 +292,8 @@ def main():
             receita_liquida=args.receita,
             sinistralidade_mlr_pct=args.mlr,
             despesas_adm_comerciais_pct=args.despesas_op,
-            resultado_financeiro=args.res_financeiro,
+            ganhos_float=args.ganhos_float,
+            despesas_juros_fixa=args.despesas_juros_fixa,
             aliquota_ir_csll_pct=args.aliquota_ir,
             exigencia_capital_ans_pct=args.retencao_ans,
             payout_sustentavel_pct=args.payout,
@@ -280,6 +307,7 @@ def main():
             empresa=args.empresa,
             setor=args.setor,
             metadata=meta,
+            ntnb=args.ntnb,
         )
 
     out_file = save_valuation_json(resultado, args.out)

@@ -86,6 +86,8 @@ def calculate_financials_ddm(
                 margem_seguranca = max(margem_seguranca, 40.0)
                 metadata["alerta_prazo_acordo"] = "Margem de segurança ajustada para >=40% devido ao prazo do acordo de balcão < 10 anos."
 
+    cresc_perp = min(float(cresc_perp), 4.5)
+
     ke_dec = float(ke) / 100.0
     g_perp_dec = float(cresc_perp) / 100.0
     roe_dec = float(roe) / 100.0

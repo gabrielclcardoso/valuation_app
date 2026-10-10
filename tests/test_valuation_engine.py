@@ -74,6 +74,7 @@ class TestValuationEngine(unittest.TestCase):
             num_acoes=1000.0,
             margem_seguranca=20.0,
             dpa_projetado=0.50,
+            ntnb=6.0,
         )
         self.assertEqual(res["ticker"], "SAPR4")
         self.assertEqual(res["modelo"], "dcf_fcff")
@@ -100,6 +101,7 @@ class TestValuationEngine(unittest.TestCase):
             divida_liquida=10000.0,
             passivos_contingentes=1000.0,  # 1000 bruto -> líquido = 660 (economia fiscal de 340)
             aliquota_ir_csll=34.0,
+            pct_contingencia_dedutivel=100.0,
             num_acoes=1150.0,
         )
         self.assertEqual(res["detalhes"]["passivos_contingentes_bruto"], 1000.0)
@@ -138,6 +140,7 @@ class TestValuationEngine(unittest.TestCase):
                 cresc_perp=3.0,
                 divida_liquida=0.0,
                 num_acoes=10.0,
+                ntnb=-1.0,
             )
 
     def test_calculate_cagr(self):
@@ -213,6 +216,7 @@ class TestValuationEngine(unittest.TestCase):
         # Quando capex_minimo_historico é fornecido e capex_projetado também
         res = calculate_dcf(
             ticker="VIVT3",
+            fclf_inicial=1000.0 - 800.0,
             ebitda_al=1000.0,
             capex_projetado=800.0,
             capex_minimo_historico=1000.0,
@@ -479,7 +483,9 @@ class TestValuationEngine(unittest.TestCase):
             receita_liquida=1000.0,
             sinistralidade_mlr_pct=80.0,
             despesas_adm_comerciais_pct=10.0,
-            resultado_financeiro=30.0,
+            ganhos_float=30.0,
+            despesas_juros_fixa=0.0,
+            ntnb=6.0,
             ke=13.0,
             cresc_perp=3.5,
             num_acoes=100.0,
@@ -497,7 +503,9 @@ class TestValuationEngine(unittest.TestCase):
             receita_liquida=1000.0,
             sinistralidade_mlr_pct=80.0,
             despesas_adm_comerciais_pct=10.0,
-            resultado_financeiro=0.0,
+            ganhos_float=0.0,
+            despesas_juros_fixa=0.0,
+            ntnb=6.0,
             ke=13.0,
             cresc_perp=3.0,
             taxas_crescimento_receita=[0.0, 0.0],
@@ -511,7 +519,9 @@ class TestValuationEngine(unittest.TestCase):
             receita_liquida=1000.0,
             sinistralidade_mlr_pct=80.0,
             despesas_adm_comerciais_pct=10.0,
-            resultado_financeiro=0.0,
+            ganhos_float=0.0,
+            despesas_juros_fixa=0.0,
+            ntnb=6.0,
             exigencia_capital_ans_pct=15.0,
             ke=13.0,
             cresc_perp=3.0,
@@ -527,7 +537,9 @@ class TestValuationEngine(unittest.TestCase):
             receita_liquida=5000.0,
             sinistralidade_mlr_pct=75.0,
             despesas_adm_comerciais_pct=12.0,
-            resultado_financeiro=50.0,
+            ganhos_float=50.0,
+            despesas_juros_fixa=0.0,
+            ntnb=6.0,
             divida_liquida=0.0,
             num_acoes=1000.0,
             ke=13.5,
@@ -538,7 +550,9 @@ class TestValuationEngine(unittest.TestCase):
             receita_liquida=5000.0,
             sinistralidade_mlr_pct=75.0,
             despesas_adm_comerciais_pct=12.0,
-            resultado_financeiro=50.0,
+            ganhos_float=50.0,
+            despesas_juros_fixa=0.0,
+            ntnb=6.0,
             divida_liquida=2000.0,  # Dívida não deve abater o Equity Value
             num_acoes=1000.0,
             ke=13.5,
@@ -551,12 +565,16 @@ class TestValuationEngine(unittest.TestCase):
         with self.assertRaises(ValueError):
             calculate_operadora_saude(
                 ticker="TEST", receita_liquida=100.0, sinistralidade_mlr_pct=80.0,
-                despesas_adm_comerciais_pct=10.0, resultado_financeiro=0.0, ke=3.0, cresc_perp=3.0, num_acoes=10.0
+                despesas_adm_comerciais_pct=10.0, ganhos_float=0.0,
+            despesas_juros_fixa=0.0,
+            ntnb=-5.0, ke=3.0, cresc_perp=3.0, num_acoes=10.0
             )
         with self.assertRaises(ValueError):
             calculate_operadora_saude(
                 ticker="TEST", receita_liquida=100.0, sinistralidade_mlr_pct=80.0,
-                despesas_adm_comerciais_pct=10.0, resultado_financeiro=0.0, ke=12.0, cresc_perp=3.0, num_acoes=0.0
+                despesas_adm_comerciais_pct=10.0, ganhos_float=0.0,
+            despesas_juros_fixa=0.0,
+            ntnb=6.0, ke=12.0, cresc_perp=3.0, num_acoes=0.0
             )
 
     # ── Blind Mode & Exportação ──────────────────────────────────────────────
@@ -634,7 +652,9 @@ class TestValuationEngine(unittest.TestCase):
             receita_liquida=1000.0,
             sinistralidade_mlr_pct=75.0,
             despesas_adm_comerciais_pct=10.0,
-            resultado_financeiro=0.0,
+            ganhos_float=0.0,
+            despesas_juros_fixa=0.0,
+            ntnb=6.0,
             exigencia_capital_ans_pct=10.0,
             taxas_crescimento_receita=[0.0],
             cresc_perp=2.0,
@@ -649,7 +669,9 @@ class TestValuationEngine(unittest.TestCase):
             receita_liquida=100.0,
             sinistralidade_mlr_pct=80.0,
             despesas_adm_comerciais_pct=10.0,
-            resultado_financeiro=0.0,
+            ganhos_float=0.0,
+            despesas_juros_fixa=0.0,
+            ntnb=6.0,
             divida_liquida=50000.0,
             num_acoes=10.0,
         )
