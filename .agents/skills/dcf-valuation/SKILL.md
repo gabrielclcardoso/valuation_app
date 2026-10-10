@@ -139,6 +139,12 @@ Para evitar arbitrariedade nas taxas projetadas ($g_1 \dots g_5$), aplique o tri
 * **Equity Risk Premium (ERP Brasil):** Entre 5,0% e 6,5%.
 * **Spread de Governança / Risco Estatal:** Adicionar de 0,5% a 1,5% para empresas de controle estatal.
 
+> [!IMPORTANT]
+> **REGRA DE CONSISTÊNCIA NOMINAL (PROIBIDO MISTURAR REAL E NOMINAL):**
+> Todos os inputs inseridos na CLI (WACC, Ke, $g_1 \dots g_5$ e $g_{\text{perp}}$) DEVEM obrigatoriamente estar em termos **NOMINAIS**. 
+> * **NÃO** insira WACC/Ke Real na CLI. Calcule o K_e Nominal embutindo a inflação na Taxa Livre de Risco através de Fisher: $R_{f,\text{nominal}} = (1 + R_{f,\text{real}}) \times (1 + \text{Inflação}) - 1$.
+> * **NÃO** use $g_{\text{perp}} = 0\%$ argumentando "crescimento real nulo". Em modelagem nominal, se a empresa repassa tarifas e não tem ganho de volume, o $g_{\text{perp}}$ deve ser **exatamente a Inflação Projetada** (ex: 3.5% ou 4.0%). O teto estrutural (Hard Cap) da arquitetura não permite $g_{\text{perp}}$ acima de 4.5%.
+
 ---
 
 ### Fase 4: Execução Exata via Python & Modo Cego
