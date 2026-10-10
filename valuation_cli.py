@@ -46,7 +46,8 @@ def main():
     dcf_p = subparsers.add_parser("dcf", help="Valuation DCF por FCFF / WACC")
     dcf_p.add_argument("--ticker", required=True)
     dcf_p.add_argument("--fclf", type=float, default=None)
-    dcf_p.add_argument("--ebitda-al", type=float, default=None)
+    dcf_p.add_argument("--fco", type=float, default=None)
+    dcf_p.add_argument("--juros-pagos", type=float, default=None, help="Despesas financeiras pagas (valor positivo)")
     dcf_p.add_argument("--capex-projetado", type=float, default=None)
     dcf_p.add_argument("--taxas", type=float, nargs="+", required=True)
     dcf_p.add_argument("--wacc", type=float, required=True)
@@ -184,10 +185,10 @@ def main():
     meta["trimestre_itr_auditado"] = args.trimestre_itr
 
     if args.command == "dcf":
-        if args.fclf is None and (args.ebitda_al is None or args.capex_projetado is None):
-            parser.error("É necessário informar --fclf OU (--ebitda-al E --capex-projetado) no modelo DCF.")
-        if args.fclf is not None and (args.ebitda_al is not None or args.capex_projetado is not None):
-            parser.error("Informe --fclf OU (--ebitda-al E --capex-projetado), não ambos.")
+        if args.fclf is None and (args.fco is None or args.juros_pagos is None or args.capex_projetado is None):
+            parser.error("É necessário informar --fclf OU (--fco E --juros-pagos E --capex-projetado) no modelo DCF.")
+        if args.fclf is not None and (args.fco is not None or args.juros_pagos is not None or args.capex_projetado is not None):
+            parser.error("Informe --fclf OU (--fco, --juros-pagos E --capex-projetado), não ambos.")
 
         resultado = calculate_dcf(
             ticker=args.ticker,
@@ -216,7 +217,8 @@ def main():
             capex_minimo_historico=args.capex_minimo_historico,
             ifrs16_expurgado=args.ifrs16_expurgado,
             teto_crescimento_oligopolio=args.teto_crescimento_oligopolio,
-            ebitda_al=args.ebitda_al,
+            fco=args.fco,
+            juros_pagos=args.juros_pagos,
             capex_projetado=args.capex_projetado,
             ntnb=args.ntnb,
         )

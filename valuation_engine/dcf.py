@@ -175,7 +175,8 @@ def calculate_dcf(
     capex_minimo_historico: Optional[float] = None,
     ifrs16_expurgado: bool = False,
     teto_crescimento_oligopolio: Optional[float] = None,
-    ebitda_al: Optional[float] = None,
+    fco: Optional[float] = None,
+    juros_pagos: Optional[float] = None,
     capex_projetado: Optional[float] = None,
     ntnb: float = 6.0,
 ) -> Dict[str, Any]:
@@ -220,7 +221,10 @@ def calculate_dcf(
         raise ValueError("O número de ações deve ser maior que zero.")
 
     if fclf_inicial is None:
-        raise ValueError("A inserção estrita do fclf_inicial (FCFF) é obrigatória. Não é permitido derivar o fluxo usando apenas EBITDA isolado.")
+        if fco is not None and juros_pagos is not None and capex_projetado is not None:
+            fclf_inicial = fco + (abs(juros_pagos) * (1.0 - (aliquota_ir_csll / 100.0))) - abs(capex_projetado)
+        else:
+            raise ValueError("É necessário informar fclf_inicial OU (fco, juros_pagos e capex_projetado).")
 
     # Validação contra projeção infinita de fluxos negativos
     if fclf_inicial < 0:
@@ -249,8 +253,8 @@ def calculate_dcf(
     provisao_queima_caixa = 0.0
     if capex_minimo_historico is not None:
         if capex_projetado is None:
-            raise ValueError("Para usar capex_minimo_historico, é necessário informar capex_projetado (e ebitda_al).")
-        deficit_capex = max(0.0, float(capex_minimo_historico) - float(capex_projetado))
+            raise ValueError("Para usar capex_minimo_historico, é necessário informar capex_projetado.")
+        deficit_capex = max(0.0, float(capex_minimo_historico) - abs(float(capex_projetado)))
         provisao_queima_caixa = deficit_capex * 5.0
 
     # 1. Projeção dos fluxos explícitos
