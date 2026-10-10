@@ -60,7 +60,7 @@ flowchart TD
 > **[HARD STOP] PROTOCOLO DE FALLBACK (ANTI-ALUCINAÇÃO EXTREMA):** Se após a busca inicial (CVM e site de RI) você NÃO conseguir baixar ou acessar os PDFs originais do DFP/ITR mais recentes da empresa:
 > 1. **PARE IMEDIATAMENTE.**
 > 2. NÃO adivinhe números, NÃO interpole, e NÃO use dados de portais secundários ou agregadores (ex: StatusInvest, Fundamentus, Yahoo Finance).
-> 3. Avise o usuário: *"Não consegui acessar os documentos primários necessários (DFP/ITR). Por favor, baixe os PDFs, coloque-os na pasta `reports/` e me avise quando estiverem prontos."*
+> 3. Avise o usuário **ESPECIFICANDO EXATAMENTE** qual período ele deve baixar (ex: ITR 2T26 ou DFP 2025): *"Não consegui acessar os documentos primários necessários. Por favor, baixe os PDFs do [ESPECIFIQUE O DOCUMENTO E PERÍODO, ex: ITR 2T26], coloque-os na pasta `reports/` e me avise quando estiverem prontos."*
 > 4. Aguarde a confirmação explícita do usuário antes de retomar a coleta ou passar para a Fase 2.
 
 #### 1.1 Levantamento Histórico Obrigatório (3 a 5 Anos - Anti-Distorção de Base):
