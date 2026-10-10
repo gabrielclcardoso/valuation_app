@@ -5,6 +5,7 @@ from jose import JWTError, jwt
 SECRET_KEY = os.getenv("SECRET_KEY", "sua_chave_secreta_super_segura_aqui")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
+ACCESS_TOKEN_EXPIRE_MINUTES_LONG = 60 * 24 * 30  # 30 dias
 
 
 def get_current_user_id(request: Request) -> int:

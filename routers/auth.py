@@ -7,7 +7,7 @@ import bcrypt
 from database import get_db
 from models import UserDB
 from schemas import LoginRequest
-from security import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
+from security import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, ACCESS_TOKEN_EXPIRE_MINUTES_LONG
 
 router = APIRouter(tags=["Autenticação"])
 
@@ -24,7 +24,12 @@ def login(login_data: LoginRequest, response: Response, db: Session = Depends(ge
     ):
         raise HTTPException(status_code=400, detail="Usuário ou senha incorretos.")
 
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    if login_data.remember_me:
+        expire_minutes = ACCESS_TOKEN_EXPIRE_MINUTES_LONG
+    else:
+        expire_minutes = ACCESS_TOKEN_EXPIRE_MINUTES
+
+    expire = datetime.utcnow() + timedelta(minutes=expire_minutes)
     to_encode = {"sub": str(user.id), "exp": expire}
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -32,7 +37,7 @@ def login(login_data: LoginRequest, response: Response, db: Session = Depends(ge
         key="access_token",
         value=f"Bearer {encoded_jwt}",
         httponly=True,
-        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        max_age=expire_minutes * 60,
         samesite="lax",
     )
     return {"message": "Login realizado com sucesso"}

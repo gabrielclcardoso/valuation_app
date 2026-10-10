@@ -21,6 +21,7 @@ class UserResponse(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     senha: str
+    remember_me: bool = False
 
 
 class ValuationCreate(BaseModel):
