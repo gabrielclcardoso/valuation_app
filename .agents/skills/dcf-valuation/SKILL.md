@@ -87,6 +87,9 @@ Antes de arbitrar o crescimento, classifique a empresa em um dos 3 regimes de me
 
 ### Fase 2: Coleta de Variáveis Conforme o Fluxo
 
+> [!CAUTION]
+> **REGRA DE ANUALIZAÇÃO OBRIGATÓRIA (ANTI-ESMAGAMENTO):** Todos os inputs financeiros (FCFF, Lucro) e taxas de rentabilidade (ROE, ROIC) fornecidos à CLI **DEVEM estar em base ANUAL (12 meses / TTM)**. Se você extrair o lucro ou fluxo de caixa de apenas um trimestre ou semestre (ex: 1S26), você é OBRIGADO a anualizá-lo antes de rodar os scripts. Inserir um ROE trimestral (ex: 5%) contra um Custo de Capital anual (ex: 15%) vai esmagar o Preço Justo e destruir a matemática do Valuation.
+
 #### Para Fluxo A (DCF Concessões e Indústria):
 1. **FCO Bruto e CapEx:** Segregar CapEx de Sustentação, Expansão Remunerada (RAB) e CapEx Não Oneroso (obrigações compulsórias sem remuneração tarifária).
 2. **Dívida Financeira Líquida:** Dívida Bruta menos Caixa e Aplicações do último ITR (isolando passivos de arrendamento operacional IFRS 16 quando o fluxo já é deduzido de leasing).
