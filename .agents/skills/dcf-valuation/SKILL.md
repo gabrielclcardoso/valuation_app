@@ -64,7 +64,8 @@ flowchart TD
 > 4. Aguarde a confirmação explícita do usuário antes de retomar a coleta ou passar para a Fase 2.
 
 #### 1.1 Levantamento Histórico Obrigatório (3 a 5 Anos - Anti-Distorção de Base):
-* Colete a série histórica de **Receita Líquida, EBITDA e Fluxo de Caixa Livre ($OpFCF = \text{EBITDA-AL} - \text{CapEx}$ ou $FCO - \text{CapEx}$)** dos últimos 3 exercícios fechados.
+* Colete a série histórica de **Receita Líquida, EBITDA e Fluxo de Caixa Livre da Firma (FCFF)** dos últimos 3 exercícios fechados.
+* **[ATENÇÃO - REGRA DO FCFF]:** A fórmula correta do FCFF é $OpFCF = \text{EBITDA-AL} - \text{CapEx} - \text{Variação_NCG} - \text{Impostos_Pagos}$ OU, partindo do FCO: $FCFF = FCO + (\text{Despesas Financeiras Pagas} \times (1 - 0.34)) - \text{CapEx}$. NUNCA use apenas "FCO - CapEx" sem somar os juros de volta, para evitar dupla penalização da dívida.
 * Calcule a média histórica do FCFF e o CAGR histórico de 3 anos.
 * Identifique distorções não recorrentes: créditos tributários extraordinários, descompassos temporários de capital de giro (NCG) ou M&A inorgânico (ex: compra da Oi Móvel).
 
