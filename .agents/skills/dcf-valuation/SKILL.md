@@ -56,6 +56,13 @@ flowchart TD
 > * **Prioridade da pasta `reports/`:** Se o usuário colocar um relatório na pasta `reports/`, utilize esse documento como fonte primária da verdade.
 > * **[OBRIGATÓRIO] PRE-FLIGHT CHECKLIST DE EVIDÊNCIA:** Antes de executar qualquer script Python da CLI, você DEVE imprimir no chat um bloco chamado "Evidência de Recência", listando: a URL ou o número do protocolo da CVM consultado, o Ano Base do FCFF, e o Trimestre do ITR utilizado. O script exigirá esses dados via `--ano-base` e `--trimestre-itr`.
 
+> [!CAUTION]
+> **[HARD STOP] PROTOCOLO DE FALLBACK (ANTI-ALUCINAÇÃO EXTREMA):** Se após a busca inicial (CVM e site de RI) você NÃO conseguir baixar ou acessar os PDFs originais do DFP/ITR mais recentes da empresa:
+> 1. **PARE IMEDIATAMENTE.**
+> 2. NÃO adivinhe números, NÃO interpole, e NÃO use dados de portais secundários ou agregadores (ex: StatusInvest, Fundamentus, Yahoo Finance).
+> 3. Avise o usuário: *"Não consegui acessar os documentos primários necessários (DFP/ITR). Por favor, baixe os PDFs, coloque-os na pasta `reports/` e me avise quando estiverem prontos."*
+> 4. Aguarde a confirmação explícita do usuário antes de retomar a coleta ou passar para a Fase 2.
+
 #### 1.1 Levantamento Histórico Obrigatório (3 a 5 Anos - Anti-Distorção de Base):
 * Colete a série histórica de **Receita Líquida, EBITDA e Fluxo de Caixa Livre ($OpFCF = \text{EBITDA-AL} - \text{CapEx}$ ou $FCO - \text{CapEx}$)** dos últimos 3 exercícios fechados.
 * Calcule a média histórica do FCFF e o CAGR histórico de 3 anos.
