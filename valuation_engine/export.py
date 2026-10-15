@@ -85,9 +85,15 @@ def print_dossier_summary(resultado: Dict[str, Any], output_path: Path):
         print(f"• ROE Sustentável Adotado: {detalhes.get('roe_adotado_pct', 0):.2f}% a.a.")
         print(f"• Custo do Capital Próprio (Ke): {detalhes.get('ke_adotado_pct', 0):.2f}% a.a.")
         print(f"• Crescimento Perpétuo (g_perp): {resultado['crescPerp']:.2f}% a.a.")
-        print("• P/VP Justo Teórico derivado: [Preservado no JSON para Modo Cego]")
+        if detalhes.get("spread_ke_g_pct") is not None:
+            print(f"• Spread de Desconto Perpétuo (Ke - g): {detalhes['spread_ke_g_pct']:.2f}%")
+        print("• P/VP e P/L Justos Teóricos derivados: [Preservado no JSON para Modo Cego]")
         print(f"• Payout Sustentável: {detalhes.get('payout_sustentavel_pct', 0):.1f}%")
         print(f"• DPA Base Projetado: R$ {detalhes.get('dpa_ano_base', 0):.4f}")
+        if resultado.get("taxasCrescimento") and len(resultado["taxasCrescimento"]) > 1:
+            print(f"• Trajetória DDM Multiestágio (Anos 1 a 5): {resultado['taxasCrescimento']}")
+        for aviso in detalhes.get("avisos_metodologicos", []):
+            print(f"• ⚠ ALERTA METODOLÓGICO: {aviso}")
         
         meta_dict = detalhes.get("metadata", {})
         if "alerta_npl" in meta_dict:

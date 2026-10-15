@@ -119,6 +119,10 @@ Para evitar arbitrariedade nas taxas projetadas ($g_1 \dots g_5$), aplique o tri
 3. **Custo de Capital Próprio ($K_e$):** Calculado via CAPM nominal BRL ($R_f + \beta \times ERP$).
 4. **Payout Sustentável (%):** Compatível com a folga do Índice de Basileia / capital mínimo regulatório.
 5. **DPA Base:** $VPA \times ROE \times \text{Payout}$.
+* **Âncora 1: Coerência de Retenção Contábil vs. Crescimento ($g_{\text{org}} = ROE \times (1 - \text{Payout})$):**
+  Verifique se o crescimento perpétuo é suportado pela retenção de lucros. Em seguradoras com payout de ~90% e ROE de ~33%, a retenção de 10% sustenta um crescimento patrimonial orgânico de ~3,3% a.a. Crescimentos de curto prazo acima disso exigem modelagem da rampa de 5 anos via DDM multiestágio (`--taxas`).
+* **Âncora 2: Distinção de Estrutura Societária (Asset-Light vs. Capitalizada):**
+  Não confunda a rentabilidade de holdings *asset-light* puras (ex: BBSE3, VPA baixo, ROE de 80%+ por baixo capital imobilizado) com holdings de seguros com patrimônio líquido retido e ágio de parcerias societárias (ex: CXSE3, VPA de ~R$ 4,60, ROE de 30%-35%). Ambas são excelentes, mas empresas com maior base patrimonial são severamente distorcidas se submetidas a taxas de desconto com picos de estresse.
 
 #### Para Fluxo C (Holdings - Ex: Itaúsa):
 1. **Participações:** Quantidade de ações e cotação de mercado das investidas.
@@ -140,8 +144,24 @@ Para evitar arbitrariedade nas taxas projetadas ($g_1 \dots g_5$), aplique o tri
 
 * **Taxa Livre de Risco Real ($R_{f,\text{real}}$):** ETTJ Tesouro IPCA+ (NTN-B) com vencimento de **10 anos** (ex: Tesouro IPCA+ 2035). O uso desta maturidade específica é OBRIGATÓRIO para garantir consistência comparativa entre todos os valuations da carteira.
 * **Inflação Esperada:** Mediana do Relatório Focus (Meta de Inflação de longo prazo).
-* **Equity Risk Premium (ERP Brasil):** Entre 5,0% e 6,5%.
-* **Spread de Governança / Risco Estatal:** Adicionar de 0,5% a 1,5% para empresas de controle estatal.
+* **Equity Risk Premium (ERP Brasil):** Entre 5,0% e 6,5% (padrão institucional: 5,50%).
+* **Spread de Governança / Risco Estatal:** +1,00% para empresas de controle estatal ou subsidiárias controladas pela União/Estados (ex: CXSE3, BBSE3, BBAS3, SAPR4). Empresas privadas: 0,0%.
+
+#### Custo de Capital Próprio ($K_e$) e WACC: Tabela Setorial de Betas Vinculantes (SSOT)
+Calculado estritamente pela fórmula CAPM nominal: $K_e = R_{f,\text{nominal}} + (\beta \times ERP) + \text{Spread Estatal}$
+Onde $R_{f,\text{nominal}} = (1 + R_{f,\text{real}}) \times (1 + \text{Inflação}) - 1$.
+
+| Setor / Natureza do Negócio | Beta Vinculante ($\beta$) | Spread Estatal | Empresas de Referência |
+| :--- | :---: | :---: | :--- |
+| **Seguradoras & Bancassurance Privadas** | 0,40 | 0,00% | PORTO3 |
+| **Seguradoras & Bancassurance Estatais** | 0,40 | +1,00% | **BBSE3, CXSE3** |
+| **Concessões de Energia e Saneamento Privadas** | 0,50 | 0,00% | ALUP11, CPFE3, EGIE3 |
+| **Concessões de Saneamento e Energia Estatais** | 0,50 | +1,00% | SAPR4, COPASA |
+| **Bancos Comerciais Privados** | 0,75 | 0,00% | ITUB4, BBDC4, SANB11 |
+| **Bancos Comerciais Estatais** | 0,75 | +1,00% | **BBAS3** |
+| **Indústria de Bens de Capital e Varejo** | 1,00 | 0,00% | WEGE3, TUPY3 |
+
+*Aviso de Governança:* Nenhuma análise isolada pode alterar o Beta setorial ou o Spread Estatal acima sem autorização expressa do usuário. Isso garante que a diferença de Preço Justo entre ativos reflita 100% a sua geração real de caixa/lucro, e não discrepâncias arbitrárias de premissas de risco.
 
 > [!IMPORTANT]
 > **REGRA DE CONSISTÊNCIA NOMINAL (PROIBIDO MISTURAR REAL E NOMINAL):**
@@ -151,13 +171,17 @@ Para evitar arbitrariedade nas taxas projetadas ($g_1 \dots g_5$), aplique o tri
 
 ---
 
-### Fase 4: Execução Exata via Python & Modo Cego
+### Fase 4: Execução Exata via Python, Sanity Checks & Modo Cego
 
 > [!IMPORTANT]
 > **O MODO CEGO É OBRIGATÓRIO (BLIND VALUATION):**
 > * O agente **NUNCA DEVE CITAR NEM CALCULAR EM TEXTO NO CHAT** o Preço Justo, Preço Teto, Cotação Atual, e **TAMBÉM NÃO DEVE DIVULGAR o Enterprise Value (EV) ou Equity Value consolidado**.
 > * Todos os preços e valores patrimoniais ficam guardados **exclusivamente dentro do arquivo JSON** gerado em `valuations/<TICKER>_valuation.json`.
 > * No chat, apresente **apenas o Dossiê das Premissas Econômicas** para análise e questionamento do usuário.
+
+#### 🛡️ Subfase 4.1: Teste de Sanidade Econômica Obrigatório Pré-Finalização
+Ao executar os scripts do motor Python, o agente deve **obrigatoriamente verificar a saída do terminal**. Se o motor emitir o aviso `• ⚠ ALERTA METODOLÓGICO:`, o agente DEVE interromper a resposta, revisar suas premissas e corrigir a distorção antes de apresentar o dossiê:
+* **Spread de Desconto Máximo $(K_e - g) \le 10,50\%$:** Em empresas defensivas de alta rentabilidade (seguradoras, saneamento, energia), o spread perpétuo $(K_e - g)$ **não deve exceder 10,50%**. Spreads acima disso equivalem a exigir que a empresa pague dividend yields perpétuos estratosféricos (> 11% a 13%) indefinidamente, denunciando sobretaxação de $K_e$ decorrente de estresse pontual de mercado secundário.
 
 #### Comandos de Execução por Tipo de Empresa:
 
@@ -226,6 +250,7 @@ python valuation_cli.py \
   --roe <ROE_PCT> \
   --ke <KE_PCT> \
   --cresc-perp <G_PERP_PCT> \
+  --taxas <G1> <G2> <G3> <G4> <G5> \
   --payout <PAYOUT_PCT> \
   --num-acoes <ACOES_MI> \
   --margem 20.0 \
@@ -237,6 +262,7 @@ python valuation_cli.py \
   --sinistralidade-media-5a <SINISTRALIDADE_MEDIA_5A_PCT> \
   --prazo-acordo-anos <PRAZO_ACORDO_ANOS>
 ```
+*(Nota: O parâmetro `--taxas` ativa o DDM Multiestágio com rampa de convergência de 5 anos; omita-o apenas se a instituição estiver madura em crescimento puramente inflacionário).*
 
 **3. Para Holdings (SOTP Intrínseco & Mercado):**
 ```bash

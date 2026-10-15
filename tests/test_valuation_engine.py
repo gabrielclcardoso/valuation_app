@@ -217,7 +217,6 @@ class TestValuationEngine(unittest.TestCase):
         res = calculate_dcf(
             ticker="VIVT3",
             fclf_inicial=1000.0 - 800.0,
-            ebitda_al=1000.0,
             capex_projetado=800.0,
             capex_minimo_historico=1000.0,
             taxas_crescimento=[4.0, 3.0],
@@ -318,6 +317,24 @@ class TestValuationEngine(unittest.TestCase):
         self.assertEqual(res["anosProjecao"], 3)
         self.assertEqual(len(res["detalhes"]["projecoes_dpa"]), 3)
         self.assertGreater(res["precoJusto"], 0)
+
+    def test_financials_ddm_sanity_checks(self):
+        # Cenário com Ke excessivo gerando spread > 10.5% e P/L baixo
+        res = calculate_financials_ddm(
+            ticker="CXSE3",
+            vpa=4.60,
+            roe=32.8,
+            ke=17.1,
+            cresc_perp=4.0,
+            payout=90.0,
+            num_acoes=3000.0,
+        )
+        detalhes = res["detalhes"]
+        self.assertEqual(detalhes["spread_ke_g_pct"], 13.1)
+        self.assertIsNotNone(detalhes["p_l_justo_implicito"])
+        self.assertGreater(len(detalhes["avisos_metodologicos"]), 0)
+        # Deve conter aviso sobre spread excessivo
+        self.assertTrue(any("Spread (Ke - g)" in av for av in detalhes["avisos_metodologicos"]))
 
     def test_financials_ddm_edge_cases(self):
         # VPA <= 0

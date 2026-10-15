@@ -177,6 +177,17 @@ def calculate_financials_ddm(
 
     total_proventos_ano = round(dpa_base * float(num_acoes), 2)
 
+    # Métricas de Sanidade Econômica
+    p_l_justo = round(preco_justo_final / lpa_teorico, 2) if lpa_teorico > 0 else None
+    yield_justo = round((dpa_base / preco_justo_final) * 100.0, 2) if preco_justo_final > 0 else None
+    spread_ke_g = round(float(ke) - float(cresc_perp), 2)
+
+    avisos_metodologicos = []
+    if spread_ke_g > 10.5:
+        avisos_metodologicos.append(
+            f"Spread (Ke - g) de {spread_ke_g:.2f}% é excessivo para perpetuidade. Exige dividend yield de {yield_justo:.1f}% indefinidamente, indicando provável sobretaxação de Ke."
+        )
+
     meta = metadata.copy() if metadata else {}
     if empresa:
         meta["empresa"] = empresa
@@ -203,6 +214,10 @@ def calculate_financials_ddm(
             "roe_adotado_pct": round(float(roe), 2),
             "ke_adotado_pct": round(float(ke), 2),
             "p_vp_justo_gordon": round(p_vp_justo, 3),
+            "p_l_justo_implicito": p_l_justo,
+            "dividend_yield_justo_pct": yield_justo,
+            "spread_ke_g_pct": spread_ke_g,
+            "avisos_metodologicos": avisos_metodologicos,
             "payout_sustentavel_pct": round(payout_efetivo, 2),
             "payout_sustentavel_teorico_pct": round(payout_sustentavel_perp * 100.0, 2),
             "crescimento_sustentavel_payout_adotado_pct": round(g_sustentavel_do_payout, 2),

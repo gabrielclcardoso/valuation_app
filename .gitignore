@@ -223,3 +223,6 @@ data/*.db-wal
 data/*.db-shm
 reports/*.pdf
 valuations/*.json
+
+# Scratch & local test scripts
+get_fin.py
