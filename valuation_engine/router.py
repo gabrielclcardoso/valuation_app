@@ -56,22 +56,26 @@ def route_company(ticker: str, setor: str = "") -> Dict[str, Any]:
     descricoes = {
         "dcf": {
             "metodologia": "DCF por FCFF (Fluxo Livre da Firma descontado por WACC)",
-            "script": "calc_dcf.py",
+            "subcomando": "dcf",
+            "comando_cli": "python valuation_cli.py dcf",
             "justificativa": "Empresa intensiva em capital, concessão ou indústria com geração operacional e dívida financeira estruturada.",
         },
         "financials": {
             "metodologia": "Gordon Growth (ROE vs Ke) & DDM de Dividendos",
-            "script": "calc_financials.py",
+            "subcomando": "financials",
+            "comando_cli": "python valuation_cli.py financials",
             "justificativa": "Instituição financeira ou seguradora onde dívida/depósitos são operacionais e a geração livre ao acionista é o dividendo regulatório.",
         },
         "holding": {
             "metodologia": "SOTP (Soma das Partes a Valor Intrínseco) & Desconto de Holding",
-            "script": "calc_holding.py",
+            "subcomando": "holding",
+            "comando_cli": "python valuation_cli.py holding",
             "justificativa": "Holding pura ou mista com receitas de equivalência patrimonial e participações em empresas investidas.",
         },
         "saude": {
             "metodologia": "DDM / FCFE Regulatório com Restrição de Solvência da ANS",
-            "script": "calc_saude.py",
+            "subcomando": "saude",
+            "comando_cli": "python valuation_cli.py saude",
             "justificativa": "Operadora de planos de saúde sujeita a provisões técnicas e exigências de capital mínimo da ANS.",
         },
     }

@@ -33,7 +33,7 @@ def main():
     # Argumentos globais de recência (Auditoria de Dados) e Risco
     parser.add_argument("--ano-base", type=int, default=None, help="Ano base do balanço (DFP) utilizado. Ex: 2025")
     parser.add_argument("--trimestre-itr", type=int, default=None, help="Trimestre do balanço (ITR) utilizado para Dívida/Caixa. Ex: 3 para 3T25")
-    parser.add_argument("--ntnb", type=float, required=True, help="Taxa da NTN-B para ancoragem de risco (Custo de Capital)")
+    parser.add_argument("--ntnb", type=float, default=None, help="Taxa da NTN-B para ancoragem de risco (Custo de Capital)")
     
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -156,7 +156,7 @@ def main():
         print("=" * 60)
         print(f"• Modelo Recomendado: {res['modelo_recomendado'].upper()}")
         print(f"• Metodologia: {res['metodologia']}")
-        print(f"• Script Dedicado: .agents/skills/dcf-valuation/scripts/{res['script']}")
+        print(f"• Comando CLI: {res['comando_cli']}")
         print(f"• Fundamento: {res['justificativa']}")
         print("=" * 60 + "\n")
         return
@@ -170,6 +170,12 @@ def main():
             "TRAVA DE SEGURANÇA: É obrigatório informar o '--ano-base' e o '--trimestre-itr'. "
             "Isso garante que o agente coletou os balanços mais recentes. "
             "Exemplo: --ano-base 2025 --trimestre-itr 3"
+        )
+        
+    if args.ntnb is None:
+        parser.error(
+            "TRAVA DE SEGURANÇA: É obrigatório informar o '--ntnb' para ancoragem de risco (Custo de Capital). "
+            "Exemplo: --ntnb 6.5"
         )
         
     if ano_atual - args.ano_base > 1:

@@ -17,25 +17,25 @@ Antes de iniciar qualquer coleta, identifique a natureza contábil e societária
 flowchart TD
     Inicio["Identificação do Ativo (Ticker / Setor)"] --> Roteador{"Tipo de Empresa"}
     
-    Roteador -->|"Concessões, Saneamento, Energia, Telecom, Indústria, Hospitais"| FluxoA["Fluxo A: DCF por FCFF (WACC)<br/>Script: calc_dcf.py"]
-    Roteador -->|"Bancos e Seguradoras / Corretoras (ITUB, BBAS, BBDC, BBSE, CXSE)"| FluxoB["Fluxo B: Gordon & DDM (Ke)<br/>Script: calc_financials.py"]
-    Roteador -->|"Holdings Puras e Mistas (ITSA4, BRAP4)"| FluxoC["Fluxo C: SOTP Intrínseco<br/>Script: calc_holding.py"]
-    Roteador -->|"Operadoras de Saúde ANS (BradSaúde/SAUD3, Hapvida)"| FluxoD["Fluxo D: Saúde Suplementar ANS<br/>Script: calc_saude.py"]
+    Roteador -->|"Concessões, Saneamento, Energia, Telecom, Indústria, Hospitais"| FluxoA["Fluxo A: DCF por FCFF (WACC)<br/>CLI: valuation_cli.py dcf"]
+    Roteador -->|"Bancos e Seguradoras / Corretoras (ITUB, BBAS, BBDC, BBSE, CXSE)"| FluxoB["Fluxo B: Gordon & DDM (Ke)<br/>CLI: valuation_cli.py financials"]
+    Roteador -->|"Holdings Puras e Mistas (ITSA4, BRAP4)"| FluxoC["Fluxo C: SOTP Intrínseco<br/>CLI: valuation_cli.py holding"]
+    Roteador -->|"Operadoras de Saúde ANS (BradSaúde/SAUD3, Hapvida)"| FluxoD["Fluxo D: Saúde Suplementar ANS<br/>CLI: valuation_cli.py saude"]
 ```
 
 > [!TIP]
 > Você pode executar a triagem automática via terminal executando:
 > `python valuation_cli.py route --ticker <TICKER>`
 
-* **Fluxo A — DCF por FCFF / WACC (`calc_dcf.py`):**
+* **Fluxo A — DCF por FCFF / WACC (`valuation_cli.py dcf`):**
   * Saneamento (SAPR4, SBSP3, CSMG3), Energia Elétrica (ALUP11, CPFE3, EGIE3, TAEE11), Telecom (TIMS3, VIVT3), Rodovias/Logística (CCRO3, ECOR3, STBP3), Indústria (WEGE3, TUPY3), Hospitais e Redes de Diagnóstico (RDOR3, FLRY3).
-* **Fluxo B — Gordon Growth & DDM (`calc_financials.py`):**
+* **Fluxo B — Gordon Growth & DDM (`valuation_cli.py financials`):**
   * Bancos (ITUB4, BBAS3, BBDC4, SANB11) e Seguradoras/Bancassurance (BBSE3, CXSE3).
   * *Fundamento:* A dívida/depósitos faz parte da operação e o caixa livre que chega ao acionista é limitado pelo Índice de Basileia ou Margem de Solvência da Susep. Usa-se $K_e$ (Custo do Capital Próprio) em vez de WACC.
-* **Fluxo C — SOTP a Valor Intrínseco (`calc_holding.py`):**
+* **Fluxo C — SOTP a Valor Intrínseco (`valuation_cli.py holding`):**
   * Holdings (ITSA4, BRAP4, SIMH3).
   * *Fundamento Anti-Bolha:* Para evitar herdar eventuais cotações de mercado infladas das controladas (ex: se Itaú estiver caro na bolsa), o modelo calcula tanto o **SOTP a Valor de Mercado** quanto o **SOTP a Valor Intrínseco** (utilizando o Preço Justo fundamentalista calculado para a investida).
-* **Fluxo D — DDM Regulatório ANS (`calc_saude.py`):**
+* **Fluxo D — DDM Regulatório ANS (`valuation_cli.py saude`):**
   * Operadoras de Planos de Saúde puras com provisões técnicas (BradSaúde/SAUD3, ODPV3).
   * *Atenção:* Operadoras verticalizadas (com hospitais próprios, ex: HAPV3) são PROIBIDAS de usar o Fluxo D. Elas devem obrigatoriamente usar o Fluxo A (DCF por FCFF) para capturar o impacto real do CapEx físico e da depreciação no fluxo de caixa.
   * *Fundamento:* Calibra a Sinistralidade Médica (MLR), o rendimento do *float* das provisões técnicas e a retenção de lucros exigida pela Margem de Solvência da ANS.
