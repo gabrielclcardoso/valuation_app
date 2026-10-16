@@ -1,6 +1,6 @@
 """Motor de Valuation para o Setor de Saúde (B3).
 Distingue com rigor:
-1. Operadoras de Planos de Saúde (BradSaúde/SAUD3, Hapvida, Odontoprev):
+1. Operadoras de Planos de Saúde (BradSaúde/SAUD3, Odontoprev):
    Reguladas pela ANS, sujeitas a Capital Baseado em Risco (CBR), Provisões Técnicas e Sinistralidade (MLR).
    Avaliadas via FCFE Regulatório ou DDM com taxa Ke.
 2. Hospitais e Diagnósticos (Rede D'Or, Fleury):
@@ -38,7 +38,7 @@ def calculate_operadora_saude(
     operadoras alavancadas.
     
     Args:
-        ticker: Ticker do ativo (ex: SAUD3, HAPV3, ODPV3)
+        ticker: Ticker do ativo (ex: SAUD3, ODPV3)
         receita_liquida: Receita Líquida anual (contraprestações dos beneficiários) em R$ Mi
         sinistralidade_mlr_pct: Índice de sinistralidade médica (Eventos / Receita Líquida %)
         despesas_adm_comerciais_pct: Despesas administrativas e comerciais sobre a receita (%)
@@ -58,7 +58,9 @@ def calculate_operadora_saude(
         setor: Setor
         metadata: Premissas complementares
     """
-    ke = max(float(ke), float(ntnb) + 5.0)
+    ipca_ref = 0.035
+    rf_nominal_pct = ((1.0 + float(ntnb) / 100.0) * (1.0 + ipca_ref) - 1.0) * 100.0
+    ke = max(float(ke), rf_nominal_pct + 2.0)
     cresc_perp = min(float(cresc_perp), 4.5)
 
     ke_dec = float(ke) / 100.0
@@ -142,7 +144,8 @@ def calculate_operadora_saude(
 
     ebit_term = rec_term * margem_op_dec
     ganhos_float_term = ganhos_float_base * (rec_term / rec_base) if rec_base > 0 else ganhos_float_base
-    rf_term = ganhos_float_term - juros_base
+    juros_term = juros_base * (1.0 + g_perp_dec)
+    rf_term = ganhos_float_term - juros_term
     lair_term = ebit_term + rf_term
     ir_term = max(0.0, lair_term * ir_dec)
     lucro_term = lair_term - ir_term

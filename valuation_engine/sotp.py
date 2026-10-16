@@ -46,7 +46,9 @@ def calculate_sotp_holding(
         metadata: Premissas e justificativas adicionais
         ntnb: Taxa da NTN-B para ancoragem de risco (Custo de Capital)
     """
-    ke_holding = max(float(ke_holding), float(ntnb) + 5.0)
+    ipca_ref = 0.035
+    rf_nominal_pct = ((1.0 + float(ntnb) / 100.0) * (1.0 + ipca_ref) - 1.0) * 100.0
+    ke_holding = max(float(ke_holding), rf_nominal_pct + 2.0)
 
     if num_acoes_holding <= 0:
         raise ValueError("O número de ações da holding deve ser maior que zero.")

@@ -139,7 +139,7 @@ class TestValuationEngine(unittest.TestCase):
                 cresc_perp=3.0,
                 divida_liquida=0.0,
                 num_acoes=10.0,
-                ntnb=-1.0,
+                ntnb=-2.5,
             )
 
     def test_calculate_cagr(self):
@@ -355,7 +355,7 @@ class TestValuationEngine(unittest.TestCase):
             ticker="TESTA",
             vpa=10.0,
             roe=25.0,  # should be capped to 20.0
-            ke=10.0,   # should be floored to 5.0 + 6.0 = 11.0
+            ke=10.0,   # should be floored via Fisher formula (8.675 + 3.5 = 12.17)
             cresc_perp=5.0,
             num_acoes=100.0,
             margem_seguranca=20.0, # should adjust to 35.0
@@ -364,7 +364,7 @@ class TestValuationEngine(unittest.TestCase):
             pdd_media_5a=100.0,
             roe_10a=20.0
         )
-        self.assertEqual(res["wacc"], 11.0)
+        self.assertEqual(res["wacc"], 12.17)
         self.assertEqual(res["margemSeguranca"], 35.0)
         self.assertEqual(res["detalhes"]["roe_adotado_pct"], 20.0)
         self.assertIn("alerta_npl", res["detalhes"]["metadata"])
@@ -549,7 +549,7 @@ class TestValuationEngine(unittest.TestCase):
     def test_operadora_saude_net_debt_ignored(self):
         # Operadora alavancada: dívida líquida NÃO deve ser deduzida no DDM
         res_desalav = calculate_operadora_saude(
-            ticker="HAPV3",
+            ticker="ODPV3",
             receita_liquida=5000.0,
             sinistralidade_mlr_pct=75.0,
             despesas_adm_comerciais_pct=12.0,
@@ -562,7 +562,7 @@ class TestValuationEngine(unittest.TestCase):
             cresc_perp=3.5,
         )
         res_alav = calculate_operadora_saude(
-            ticker="HAPV3",
+            ticker="ODPV3",
             receita_liquida=5000.0,
             sinistralidade_mlr_pct=75.0,
             despesas_adm_comerciais_pct=12.0,
@@ -627,6 +627,7 @@ class TestValuationEngine(unittest.TestCase):
         self.assertEqual(route_company("SAUD3")["modelo_recomendado"], "saude")
         self.assertEqual(route_company("SAPR4")["modelo_recomendado"], "dcf")
         self.assertEqual(route_company("WEGE3")["modelo_recomendado"], "dcf")
+        self.assertEqual(route_company("HAPV3")["modelo_recomendado"], "dcf")
 
     # ── Testes de Robustez Adicionais e Cobertura Completa ────────────────────
     def test_sotp_holding_empty_participacoes_raises_error(self):
@@ -830,6 +831,84 @@ class TestValuationEngine(unittest.TestCase):
             self.assertIsNone(listed[0]["detalhes"])
         finally:
             db.close()
+
+    # ── Testes das Correções Metodológicas Refinadas ─────────────────────────
+    def test_fisher_floors_all_models(self):
+        # NTN-B = 6.0%, IPCA = 3.5% -> Rf_nominal = ((1.06 * 1.035) - 1) * 100 = 9.71%
+        # DCF: floor = Rf_nominal + 1.5% = 11.21%
+        res_dcf = calculate_dcf(
+            ticker="SAPR4", fclf_inicial=500.0, taxas_crescimento=[4.0],
+            wacc=10.0, cresc_perp=3.5, divida_liquida=1000.0, num_acoes=100.0, ntnb=6.0
+        )
+        self.assertEqual(res_dcf["wacc"], 11.21)
+
+        # DDM Seguradora: floor = Rf_nominal + 2.0% = 11.71%
+        res_seg = calculate_financials_ddm(
+            ticker="BBSE3", vpa=10.0, roe=20.0, ke=10.0, cresc_perp=3.5,
+            num_acoes=100.0, ntnb=6.0, tipo="seguradora"
+        )
+        self.assertEqual(res_seg["wacc"], 11.71)
+
+        # DDM Banco: floor = Rf_nominal + 3.5% = 13.21%
+        res_banco = calculate_financials_ddm(
+            ticker="ITUB4", vpa=10.0, roe=20.0, ke=10.0, cresc_perp=3.5,
+            num_acoes=100.0, ntnb=6.0, tipo="banco"
+        )
+        self.assertEqual(res_banco["wacc"], 13.21)
+
+        # Saúde: floor = Rf_nominal + 2.0% = 11.71%
+        res_saude = calculate_operadora_saude(
+            ticker="ODPV3", receita_liquida=1000.0, sinistralidade_mlr_pct=75.0,
+            despesas_adm_comerciais_pct=10.0, ganhos_float=20.0, despesas_juros_fixa=0.0,
+            ntnb=6.0, ke=10.0, cresc_perp=3.5, num_acoes=100.0
+        )
+        self.assertEqual(res_saude["wacc"], 11.71)
+
+        # SOTP: floor = Rf_nominal + 2.0% = 11.71%
+        res_sotp = calculate_sotp_holding(
+            ticker="ITSA4",
+            participacoes=[{
+                "nome": "Itaú",
+                "ticker": "ITUB4",
+                "quantidade_acoes": 100.0,
+                "preco_mercado": 30.0,
+                "preco_justo_intrinseco": 32.0,
+            }],
+            divida_liquida_holding=0.0, num_acoes_holding=100.0, ke_holding=10.0, ntnb=6.0
+        )
+        self.assertEqual(res_sotp["wacc"], 11.71)
+
+    def test_ddm_multistage_payout_convergence(self):
+        # ROE = 20%, g_perp = 4.0% -> payout sustentável perpétuo = 1 - (4/20) = 80%
+        # Com payout inicial = 40% e crescimento zero nos anos 1 a 3:
+        # DPA anual = 10 * 0.20 * 0.40 = 0.80
+        # No ano terminal: LPA terminal = 2.0 * (1.04) = 2.08
+        # DPA terminal = 2.08 * 0.80 = 1.664 (refletindo convergência para payout sustentável)
+        res = calculate_financials_ddm(
+            ticker="SANB11", vpa=10.0, roe=20.0, ke=14.0, cresc_perp=4.0,
+            payout=40.0, taxas_crescimento_dpa=[0.0, 0.0, 0.0], num_acoes=100.0
+        )
+        # O DPA dos anos explícitos é 0.80
+        self.assertEqual(res["detalhes"]["projecoes_dpa"][0]["dpa_projetado"], 0.8)
+        # Se não houvesse ajuste de payout no terminal, DPA terminal seria 0.80 * 1.04 = 0.832
+        # Com a convergência, DPA terminal é 2.08 * 0.80 = 1.664, dobrando o VP terminal
+        # VP terminal = (1.664 / (0.14 - 0.04)) / (1.14 ** 3) = 16.64 / 1.481544 = 11.2315
+        self.assertGreater(res["precoJusto"], 12.0)
+
+    def test_operadora_saude_terminal_debt_interest(self):
+        # Verifica que juros de dívida escalam suavemente por (1 + g_perp) no terminal
+        res_sem_juros = calculate_operadora_saude(
+            ticker="ODPV3", receita_liquida=1000.0, sinistralidade_mlr_pct=75.0,
+            despesas_adm_comerciais_pct=10.0, ganhos_float=50.0, despesas_juros_fixa=0.0,
+            ntnb=6.0, ke=13.0, cresc_perp=4.0, num_acoes=100.0
+        )
+        res_com_juros = calculate_operadora_saude(
+            ticker="ODPV3", receita_liquida=1000.0, sinistralidade_mlr_pct=75.0,
+            despesas_adm_comerciais_pct=10.0, ganhos_float=50.0, despesas_juros_fixa=10.0,
+            ntnb=6.0, ke=13.0, cresc_perp=4.0, num_acoes=100.0
+        )
+        self.assertLess(res_com_juros["precoJusto"], res_sem_juros["precoJusto"])
+        self.assertGreater(res_com_juros["precoJusto"], 0.0)
 
 
 if __name__ == "__main__":

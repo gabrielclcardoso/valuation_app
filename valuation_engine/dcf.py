@@ -169,7 +169,9 @@ def calculate_dcf(
         setor: Setor de atuação
         metadata: Dicionário adicional com memórias de cálculo e justificativas
     """
-    wacc = max(float(wacc), float(ntnb) + 4.0)
+    ipca_ref = 0.035
+    rf_nominal_pct = ((1.0 + float(ntnb) / 100.0) * (1.0 + ipca_ref) - 1.0) * 100.0
+    wacc = max(float(wacc), rf_nominal_pct + 1.5)
     cresc_perp = min(float(cresc_perp), 4.5)
 
     wacc_dec = float(wacc) / 100.0

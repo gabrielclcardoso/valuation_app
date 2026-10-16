@@ -20,7 +20,7 @@ flowchart TD
     Roteador -->|"Concessões, Saneamento, Energia, Telecom, Indústria, Hospitais"| FluxoA["Fluxo A: DCF por FCFF (WACC)<br/>CLI: valuation_cli.py dcf"]
     Roteador -->|"Bancos e Seguradoras / Corretoras (ITUB, BBAS, BBDC, BBSE, CXSE)"| FluxoB["Fluxo B: Gordon & DDM (Ke)<br/>CLI: valuation_cli.py financials"]
     Roteador -->|"Holdings Puras e Mistas (ITSA4, BRAP4)"| FluxoC["Fluxo C: SOTP Intrínseco<br/>CLI: valuation_cli.py holding"]
-    Roteador -->|"Operadoras de Saúde ANS (BradSaúde/SAUD3, Hapvida)"| FluxoD["Fluxo D: Saúde Suplementar ANS<br/>CLI: valuation_cli.py saude"]
+    Roteador -->|"Operadoras de Saúde ANS Puras (BradSaúde/SAUD3, ODPV3)"| FluxoD["Fluxo D: Saúde Suplementar ANS<br/>CLI: valuation_cli.py saude"]
 ```
 
 > [!TIP]
@@ -295,13 +295,20 @@ python valuation_cli.py \
   --ticker <TICKER> \
   --receita <RECEITA_MI> \
   --mlr <SINISTRALIDADE_PCT> \
+  --despesas-op <DESPESAS_ADM_COMERCIAIS_PCT> \
   --ganhos-float <FLOAT_MI> \
   --despesas-juros-fixa <JUROS_MI> \
+  --retencao-ans <FATOR_K_ANS_PCT> \
+  --payout <PAYOUT_PCT> \
   --ke <KE_PCT> \
   --cresc-perp <G_PERP_PCT> \
+  --taxas <G1> <G2> <G3> <G4> <G5> \
   --num-acoes <ACOES_MI> \
-  --margem 20.0
+  --margem 20.0 \
+  --empresa "<NOME>" \
+  --setor "Saúde Suplementar"
 ```
+*(Nota: O parâmetro `--taxas` é opcional e projeta o crescimento explícito da receita/vidas nos primeiros anos; omita-o se a operadora estiver em regime estável de crescimento perpétuo).*
 
 ---
 

@@ -64,7 +64,10 @@ def calculate_financials_ddm(
         roe = min(roe, float(roe_10a))
     
     if ntnb is not None:
-        ke = max(ke, float(ntnb) + 6.0)
+        ipca_ref = 0.035
+        rf_nominal_pct = ((1.0 + float(ntnb) / 100.0) * (1.0 + ipca_ref) - 1.0) * 100.0
+        spread_min = 2.0 if tipo == "seguradora" else 3.5
+        ke = max(float(ke), rf_nominal_pct + spread_min)
 
     if pdd_atual is not None and pdd_media_5a is not None:
         if float(pdd_atual) < float(pdd_media_5a):
@@ -134,12 +137,14 @@ def calculate_financials_ddm(
     if taxas_crescimento_dpa:
         taxas = [float(t) for t in taxas_crescimento_dpa]
         dpa_atual = dpa_base
+        lpa_atual = lpa_teorico
         soma_pv_dpa = 0.0
         projecoes = []
 
         for t, taxa in enumerate(taxas, start=1):
             g_dec = float(taxa) / 100.0
             dpa_atual = dpa_atual * (1.0 + g_dec)
+            lpa_atual = lpa_atual * (1.0 + g_dec)
             pv = dpa_atual / ((1.0 + ke_dec) ** t)
             soma_pv_dpa += pv
             projecoes.append(
@@ -151,8 +156,10 @@ def calculate_financials_ddm(
                 }
             )
 
-        # Valor Terminal: dividendos na perpetuidade com crescimento g_perp
-        dpa_terminal = dpa_atual * (1.0 + g_perp_dec)
+        # Valor Terminal: na perpetuidade, o lucro cresce a g_perp e o payout
+        # converge para o nível sustentável teórico (1 - g_perp / ROE)
+        lpa_terminal = lpa_atual * (1.0 + g_perp_dec)
+        dpa_terminal = lpa_terminal * payout_sustentavel_perp
         valor_terminal_dpa = dpa_terminal / (ke_dec - g_perp_dec)
         vp_terminal_dpa = valor_terminal_dpa / ((1.0 + ke_dec) ** len(taxas))
         preco_justo_ddm = soma_pv_dpa + vp_terminal_dpa

@@ -18,10 +18,10 @@ MAPA_TICKERS_CONHECIDOS = {
     "BRAP3": "holding", "BRAP4": "holding",
     "SIMH3": "holding",
 
-    # Operadoras de Saúde (ANS)
-    "SAUD3": "saude", "HAPV3": "saude", "ODPV3": "saude",
+    # Operadoras de Saúde Puras (ANS)
+    "SAUD3": "saude", "ODPV3": "saude",
 
-    # Infraestrutura / Utilities / Indústria (DCF)
+    # Infraestrutura / Utilities / Indústria / Saúde Verticalizada (DCF)
     "SAPR3": "dcf", "SAPR4": "dcf", "SAPR11": "dcf",
     "SBSP3": "dcf", "CSMG3": "dcf",
     "ALUP3": "dcf", "ALUP4": "dcf", "ALUP11": "dcf",
@@ -30,7 +30,7 @@ MAPA_TICKERS_CONHECIDOS = {
     "TIMS3": "dcf", "VIVT3": "dcf",
     "WEGE3": "dcf", "TUPY3": "dcf",
     "CCRO3": "dcf", "ECOR3": "dcf", "STBP3": "dcf",
-    "RDOR3": "dcf", "FLRY3": "dcf",
+    "RDOR3": "dcf", "FLRY3": "dcf", "HAPV3": "dcf",
 }
 
 
