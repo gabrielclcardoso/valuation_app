@@ -31,35 +31,16 @@ def calculate_operadora_saude(
     setor: str = "Saúde Suplementar / Operadora ANS",
     metadata: Optional[Dict[str, Any]] = None,
     ntnb: float = 6.0,
+    reinvestir_retencao_voluntaria_no_float: bool = True,
 ) -> Dict[str, Any]:
     """Calcula o Valuation para Operadoras de Planos de Saúde considerando regulação da ANS (RN 569/2022).
     A retenção de capital é estritamente vinculada à variação do capital regulatório exigido
-    pela expansão da receita/operações (ΔReceita * k), e suporta dedução de dívida líquida para
-    operadoras alavancadas.
-    
-    Args:
-        ticker: Ticker do ativo (ex: SAUD3, ODPV3)
-        receita_liquida: Receita Líquida anual (contraprestações dos beneficiários) em R$ Mi
-        sinistralidade_mlr_pct: Índice de sinistralidade médica (Eventos / Receita Líquida %)
-        despesas_adm_comerciais_pct: Despesas administrativas e comerciais sobre a receita (%)
-        ganhos_float: Ganhos obtidos com o float das reservas técnicas (variáveis com a receita) em R$ Mi
-        despesas_juros_fixa: Despesas de juros (flat) em R$ Mi
-        aliquota_ir_csll_pct: Alíquota efetiva de tributação (%)
-        exigencia_capital_ans_pct: Fator de capital regulatório requerido pela expansão da operação k (RN 569/2022) (%)
-        payout_sustentavel_pct: Payout dos lucros distribuíveis após recompor exigência da ANS (%)
-        ke: Custo de Capital Próprio via CAPM (% a.a.)
-        cresc_perp: Crescimento perpétuo (% a.a.)
-        num_acoes: Total de ações em Milhões
-        divida_liquida: Dívida líquida financeira da operadora/holding em R$ Mi (0 se operadora desalavancada)
-        margem_seguranca: Margem de segurança (%)
-        taxas_crescimento_receita: Trajetória de crescimento da base de vidas/receita (%)
-        pct_jcp: Percentual dos proventos sob forma de JCP bruto (%)
-        empresa: Nome da empresa
-        setor: Setor
-        metadata: Premissas complementares
+    pela expansão da receita/operações (ΔReceita * k), capitalizando a retenção voluntária no float
+    e convergindo para o FCFE Regulatório integral na perpetuidade.
     """
     ipca_ref = 0.035
     rf_nominal_pct = ((1.0 + float(ntnb) / 100.0) * (1.0 + ipca_ref) - 1.0) * 100.0
+    rf_nominal_dec = rf_nominal_pct / 100.0
     ke = max(float(ke), rf_nominal_pct + 2.0)
     cresc_perp = min(float(cresc_perp), 4.5)
 
@@ -87,9 +68,10 @@ def calculate_operadora_saude(
     taxas = [float(t) for t in taxas_crescimento_receita] if taxas_crescimento_receita else [float(cresc_perp)] * 5
 
     # 1. Demonstração de Resultado Normalizada da Operadora (Ano Base)
+    # A variação de receita do Ano Base em relação ao Ano -1 é Rec_0 * (g_base / (1 + g_base)),
+    # evitando deduzir a expansão futura do Ano 1 em duplicidade.
     g_base_dec = float(taxas[0]) / 100.0 if taxas else g_perp_dec
-    delta_rec_base = max(0.0, rec_base * g_base_dec)
-    # Retenção regulatória vinculada à variação do capital regulatório exigido (ΔReceita * k - RN 569/2022)
+    delta_rec_base = max(0.0, rec_base * (g_base_dec / (1.0 + g_base_dec))) if (1.0 + g_base_dec) > 0 else 0.0
     retencao_ans_base = delta_rec_base * k_ans_dec
 
     ebit_base = rec_base * margem_op_dec
@@ -100,8 +82,9 @@ def calculate_operadora_saude(
     proventos_base = lucro_dist_base * payout_dec
     dpa_base = proventos_base / float(num_acoes)
 
-    # 2. DDM Multiestágio com Dinâmica de Solvência ANS ano a ano
+    # 2. DDM Multiestágio com Dinâmica de Solvência ANS ano a ano e Capitalização no Float
     rec_ant = rec_base
+    reserva_livre_acumulada = 0.0
     soma_pv = 0.0
     projecoes = []
 
@@ -112,13 +95,19 @@ def calculate_operadora_saude(
         retencao_ans_t = delta_rec_t * k_ans_dec
 
         ebit_t = rec_t * margem_op_dec
-        ganhos_float_t = ganhos_float_base * (rec_t / rec_base) if rec_base > 0 else ganhos_float_base
+        ganhos_float_op_t = ganhos_float_base * (rec_t / rec_base) if rec_base > 0 else ganhos_float_base
+        rendimento_reserva_t = (reserva_livre_acumulada * rf_nominal_dec) if reinvestir_retencao_voluntaria_no_float else 0.0
+        ganhos_float_t = ganhos_float_op_t + rendimento_reserva_t
         rf_t = ganhos_float_t - juros_base
         lair_t = ebit_t + rf_t
         ir_t = max(0.0, lair_t * ir_dec)
         lucro_t = lair_t - ir_t
         lucro_dist_t = max(0.0, lucro_t - retencao_ans_t)
         proventos_t = lucro_dist_t * payout_dec
+        retencao_voluntaria_t = lucro_dist_t * (1.0 - payout_dec)
+        if reinvestir_retencao_voluntaria_no_float:
+            reserva_livre_acumulada += retencao_voluntaria_t
+
         dpa_t = proventos_t / float(num_acoes)
         pv = dpa_t / ((1.0 + ke_dec) ** t)
         soma_pv += pv
@@ -131,26 +120,29 @@ def calculate_operadora_saude(
                 "delta_receita_mi": round(delta_rec_t, 2),
                 "retencao_solvencia_ans_mi": round(retencao_ans_t, 2),
                 "lucro_distribuivel_mi": round(lucro_dist_t, 2),
+                "reserva_livre_acumulada_mi": round(reserva_livre_acumulada, 2),
                 "dpa_projetado": round(dpa_t, 4),
                 "valor_presente": round(pv, 4),
             }
         )
         rec_ant = rec_t
 
-    # 3. Valor Terminal Perpétuo
+    # 3. Valor Terminal Perpétuo (Convergência para FCFE Regulatório Integral pós-ANS)
     rec_term = rec_ant * (1.0 + g_perp_dec)
     delta_rec_term = max(0.0, rec_ant * g_perp_dec)
     retencao_ans_term = delta_rec_term * k_ans_dec
 
     ebit_term = rec_term * margem_op_dec
-    ganhos_float_term = ganhos_float_base * (rec_term / rec_base) if rec_base > 0 else ganhos_float_base
+    ganhos_float_op_term = ganhos_float_base * (rec_term / rec_base) if rec_base > 0 else ganhos_float_base
+    rendimento_reserva_term = (reserva_livre_acumulada * rf_nominal_dec) if reinvestir_retencao_voluntaria_no_float else 0.0
+    ganhos_float_term = ganhos_float_op_term + rendimento_reserva_term
     juros_term = juros_base * (1.0 + g_perp_dec)
     rf_term = ganhos_float_term - juros_term
     lair_term = ebit_term + rf_term
     ir_term = max(0.0, lair_term * ir_dec)
     lucro_term = lair_term - ir_term
     lucro_dist_term = max(0.0, lucro_term - retencao_ans_term)
-    proventos_term = lucro_dist_term * payout_dec
+    proventos_term = lucro_dist_term if reinvestir_retencao_voluntaria_no_float else (lucro_dist_term * payout_dec)
     dpa_terminal = proventos_term / float(num_acoes)
 
     valor_terminal_dpa = dpa_terminal / (ke_dec - g_perp_dec)
@@ -199,11 +191,14 @@ def calculate_operadora_saude(
             "ganhos_float_mi": round(ganhos_float_base, 2),
             "despesas_juros_fixa_mi": round(juros_base, 2),
             "resultado_financeiro_liquido_mi": round(rf_base, 2),
+            "rf_nominal_pct": round(rf_nominal_pct, 4),
             "lucro_liquido_projetado_mi": round(lucro_liq_base, 2),
             "retencao_reserva_solvencia_ans_mi": round(retencao_ans_base, 2),
             "lucro_distribuivel_mi": round(lucro_dist_base, 2),
+            "reserva_livre_acumulada_mi": round(reserva_livre_acumulada, 2),
+            "fcfe_regulatorio_terminal_mi": round(lucro_dist_term, 2),
             "payout_sustentavel_pct": round(float(payout_sustentavel_pct), 2),
-            "divida_liquida_deduzida_mi": 0.0, # Zerado, Dívida não deve mais ser deduzida no DDM
+            "divida_liquida_deduzida_mi": 0.0,
             "dpa_ano_base": round(dpa_base, 4),
             "metrica_bazin": metrica_bazin,
             "projecoes_dpa": projecoes,

@@ -21,14 +21,19 @@ MAPA_TICKERS_CONHECIDOS = {
     # Operadoras de Saúde Puras (ANS)
     "SAUD3": "saude", "ODPV3": "saude",
 
-    # Infraestrutura / Utilities / Indústria / Saúde Verticalizada (DCF)
+    # Infraestrutura / Utilities / Indústria / Saúde Verticalizada / Bolsas / Shoppings (DCF)
     "SAPR3": "dcf", "SAPR4": "dcf", "SAPR11": "dcf",
     "SBSP3": "dcf", "CSMG3": "dcf",
     "ALUP3": "dcf", "ALUP4": "dcf", "ALUP11": "dcf",
     "TAEE3": "dcf", "TAEE4": "dcf", "TAEE11": "dcf",
     "CPFE3": "dcf", "EGIE3": "dcf", "EQTL3": "dcf",
+    "NEOE3": "dcf", "ENGI11": "dcf", "AURE3": "dcf",
+    "CMIG4": "dcf", "ELET3": "dcf",
     "TIMS3": "dcf", "VIVT3": "dcf",
-    "WEGE3": "dcf", "TUPY3": "dcf",
+    "WEGE3": "dcf", "TUPY3": "dcf", "INTB3": "dcf",
+    "VALE3": "dcf", "PETR4": "dcf", "SUZB3": "dcf", "KLBN11": "dcf", "SLCE3": "dcf",
+    "ALOS3": "dcf", "MULT3": "dcf", "IGTI11": "dcf",
+    "B3SA3": "dcf",
     "CCRO3": "dcf", "ECOR3": "dcf", "STBP3": "dcf",
     "RDOR3": "dcf", "FLRY3": "dcf", "HAPV3": "dcf",
 }
@@ -43,9 +48,11 @@ def route_company(ticker: str, setor: str = "") -> Dict[str, Any]:
         modelo = MAPA_TICKERS_CONHECIDOS[tick]
     elif any(s in setor_lower for s in ["banco", "bancário", "financeiro"]):
         modelo = "financials"
-    elif any(s in setor_lower for s in ["segur", "previdência", "corretora"]):
+    elif any(s in setor_lower for s in ["seguradora", "seguros", "ressegur", "previdência", "corretora"]):
         modelo = "financials"
-    elif "holding" in setor_lower:
+    elif "holding" in setor_lower and not any(
+        s in setor_lower for s in ["elétrica", "eletrica", "energia", "saneamento", "infraestrutura"]
+    ):
         modelo = "holding"
     elif any(s in setor_lower for s in ["operadora de saúde", "plano de saúde", "saúde suplementar"]):
         modelo = "saude"

@@ -21,30 +21,12 @@ def calculate_sotp_holding(
     setor: str = "Holding Financeira / Conglomerado",
     metadata: Optional[Dict[str, Any]] = None,
     ntnb: float = 6.0,
+    deduzir_despesas_do_desconto: bool = True,
+    aliquota_ir_holding_pct: float = 0.0,
 ) -> Dict[str, Any]:
     """Calcula o Valuation SOTP Intrínseco e de Mercado para Holdings.
-    
-    Args:
-        ticker: Ticker da holding (ex: ITSA4)
-        participacoes: Lista de participações, onde cada item contém:
-            - 'nome': Nome da empresa investida (ex: 'Itaú Unibanco')
-            - 'ticker': Ticker da investida (ex: 'ITUB4')
-            - 'quantidade_acoes': Quantidade de ações que a holding detém (em Milhões)
-            - 'preco_mercado': Cotação atual de tela na B3 (R$)
-            - 'preco_justo_intrinseco': Preço justo calculado da investida via Gordon/DCF (R$)
-            - 'dpa_esperado': Dividendo por ação pago pela investida à holding (R$)
-        divida_liquida_holding: Dívida líquida exclusiva da holding (R$ Milhões)
-        num_acoes_holding: Total de ações emitidas pela holding (Milhões)
-        desconto_holding_adotado_pct: Desconto de holding considerado justo/estrutural (%)
-        margem_seguranca: Margem de segurança aplicada ao Preço Justo (%)
-        dpa_projetado_holding: DPA projetado da própria holding para métrica Bazin (R$)
-        despesas_adm_holding: Despesas operacionais anuais da holding (R$ Milhões)
-        ke_holding: Taxa de desconto para capitalizar despesas administrativas da holding (% a.a.)
-        pct_jcp: Percentual dos proventos pagos sob a forma de JCP bruto (%)
-        empresa: Nome corporativo
-        setor: Setor
-        metadata: Premissas e justificativas adicionais
-        ntnb: Taxa da NTN-B para ancoragem de risco (Custo de Capital)
+    Harmoniza o VP das despesas administrativas com o desconto estrutural de holding
+    (evitando dupla penalização) e deduz o vazamento tributário de PIS/COFINS (9,25%) sobre JCP recebido.
     """
     ipca_ref = 0.035
     rf_nominal_pct = ((1.0 + float(ntnb) / 100.0) * (1.0 + ipca_ref) - 1.0) * 100.0
@@ -59,7 +41,6 @@ def calculate_sotp_holding(
     total_intrinseco_bruto = 0.0
     total_proventos_recebidos = 0.0
     detalhes_participacoes = []
-    avisos = []
 
     for part in participacoes:
         nome = part.get("nome", "Ativo")
@@ -68,11 +49,8 @@ def calculate_sotp_holding(
         p_mercado = float(part.get("preco_mercado", 0.0))
         p_intrinseco_val = part.get("preco_justo_intrinseco")
 
-        # Validação do preço justo intrínseco das investidas:
-        # Se omitido, alerta explicitamente que foi usado fallback para preço de mercado
         if p_intrinseco_val is not None and float(p_intrinseco_val) > 0:
             p_intrinseco = float(p_intrinseco_val)
-            usou_fallback = False
             fonte = "intrinseco_calculado"
         else:
             raise ValueError(
@@ -96,7 +74,6 @@ def calculate_sotp_holding(
                 "quantidade_acoes_mi": round(qtd, 2),
                 "preco_mercado": round(p_mercado, 2),
                 "preco_justo_intrinseco": round(p_intrinseco, 2),
-                "usou_fallback_mercado": usou_fallback,
                 "fonte_preco_intrinseco": fonte,
                 "valor_mercado_bruto_mi": round(val_mercado, 2),
                 "valor_intrinseco_bruto_mi": round(val_intrinseco, 2),
@@ -109,34 +86,47 @@ def calculate_sotp_holding(
     div_holding = float(divida_liquida_holding)
     desp_adm = float(despesas_adm_holding)
     ke_h_dec = float(ke_holding) / 100.0
+    t_holding = float(aliquota_ir_holding_pct) / 100.0
 
-    g_inflacao = 0.035
+    g_inflacao = ipca_ref
     if desp_adm > 0 and ke_h_dec > g_inflacao:
-        vp_despesas_adm = desp_adm / (ke_h_dec - g_inflacao)
+        vp_despesas_adm = (desp_adm * (1.0 - t_holding)) / (ke_h_dec - g_inflacao)
     else:
         vp_despesas_adm = 0.0
 
     desconto_dec = float(desconto_holding_adotado_pct) / 100.0
+    nav_pre_desp_mercado = total_mercado_bruto - div_holding
+    nav_pre_desp_intrinseco = total_intrinseco_bruto - div_holding
+
+    if deduzir_despesas_do_desconto and vp_despesas_adm > 0:
+        peso_adm_mercado = (vp_despesas_adm / nav_pre_desp_mercado) if nav_pre_desp_mercado > 0 else 0.0
+        peso_adm_intrinseco = (vp_despesas_adm / nav_pre_desp_intrinseco) if nav_pre_desp_intrinseco > 0 else 0.0
+        desconto_res_mercado = max(0.0, desconto_dec - peso_adm_mercado)
+        desconto_res_intrinseco = max(0.0, desconto_dec - peso_adm_intrinseco)
+    else:
+        desconto_res_mercado = desconto_dec
+        desconto_res_intrinseco = desconto_dec
 
     # 1. NAV a Valor de Mercado (Bolsa) deduzindo dívida e VP das despesas
-    nav_mercado_liquido = total_mercado_bruto - div_holding - vp_despesas_adm
+    nav_mercado_liquido = nav_pre_desp_mercado - vp_despesas_adm
     preco_mercado_sem_desconto = max(0.0, nav_mercado_liquido / float(num_acoes_holding))
-    preco_mercado_com_desconto = preco_mercado_sem_desconto * (1.0 - desconto_dec)
+    preco_mercado_com_desconto = preco_mercado_sem_desconto * (1.0 - desconto_res_mercado)
 
     # 2. NAV a Valor Intrínseco (Fundamentalista) deduzindo dívida e VP das despesas
-    nav_intrinseco_liquido = total_intrinseco_bruto - div_holding - vp_despesas_adm
+    nav_intrinseco_liquido = nav_pre_desp_intrinseco - vp_despesas_adm
     preco_intrinseco_sem_desconto = max(0.0, nav_intrinseco_liquido / float(num_acoes_holding))
-    preco_justo_intrinseco_com_desconto = preco_intrinseco_sem_desconto * (1.0 - desconto_dec)
+    preco_justo_intrinseco_com_desconto = preco_intrinseco_sem_desconto * (1.0 - desconto_res_intrinseco)
 
     # Preço Justo Adotado = SOTP Intrínseco com Desconto
     preco_justo_final = preco_justo_intrinseco_com_desconto
     preco_teto_final = preco_justo_final * (1.0 - (float(margem_seguranca) / 100.0))
 
-    # Estimativa de DPA da Holding (se não informado, calcula via proventos recebidos menos despesas)
+    # Estimativa de DPA da Holding (deduzindo despesas adm e vazamento de 9,25% de PIS/COFINS sobre JCP recebido)
+    vazamento_pis_cofins = total_proventos_recebidos * (float(pct_jcp) / 100.0) * 0.0925
     if dpa_projetado_holding is not None and dpa_projetado_holding > 0:
         dpa_holding = float(dpa_projetado_holding)
     else:
-        fluxo_liquido_holding = max(0.0, total_proventos_recebidos - desp_adm)
+        fluxo_liquido_holding = max(0.0, total_proventos_recebidos - desp_adm - vazamento_pis_cofins)
         dpa_holding = fluxo_liquido_holding / float(num_acoes_holding)
 
     # Métrica Bazin
@@ -159,7 +149,7 @@ def calculate_sotp_holding(
         "anosProjecao": 5,
         "taxasCrescimento": [5.0, 5.0, 5.0, 5.0, 5.0],
         "wacc": round(float(ke_holding), 2),
-        "crescPerp": 3.0,
+        "crescPerp": 3.5,
         "dividaLiquida": round(div_holding, 2),
         "numAcoes": round(float(num_acoes_holding), 2),
         "margemSeguranca": round(float(margem_seguranca), 2),
@@ -172,13 +162,14 @@ def calculate_sotp_holding(
             "divida_liquida_holding_mi": round(div_holding, 2),
             "despesas_adm_holding_anual_mi": round(desp_adm, 2),
             "vp_despesas_adm_holding_mi": round(vp_despesas_adm, 2),
+            "vazamento_pis_cofins_jcp_mi": round(vazamento_pis_cofins, 2),
             "taxa_desconto_holding_ke_pct": round(float(ke_holding), 2),
             "nav_mercado_liquido_mi": round(nav_mercado_liquido, 2),
             "nav_intrinseco_liquido_mi": round(nav_intrinseco_liquido, 2),
             "desconto_holding_adotado_pct": round(float(desconto_holding_adotado_pct), 2),
+            "desconto_holding_residual_intrinseco_pct": round(desconto_res_intrinseco * 100.0, 2),
+            "desconto_holding_residual_mercado_pct": round(desconto_res_mercado * 100.0, 2),
             "dpa_holding_projetado": round(dpa_holding, 4),
-            "avisos": avisos,
-            "possui_fallback_mercado": len(avisos) > 0,
             "participacoes": detalhes_participacoes,
             "cenarios": {
                 "sotp_mercado": {

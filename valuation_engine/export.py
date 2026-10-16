@@ -44,15 +44,24 @@ def print_dossier_summary(resultado: Dict[str, Any], output_path: Path):
         print(f"• Dívida Financeira Líquida: R$ {detalhes.get('divida_financeira_liquida', 0):,.2f} Mi")
         contingentes_bruto = detalhes.get("passivos_contingentes_bruto", 0)
         regulatorio = detalhes.get("passivos_regulatorios", 0)
+        outros_nao_ded = detalhes.get("outros_passivos_nao_dedutiveis", 0)
         outros_deduzidos = detalhes.get("outros_passivos_deduzidos", 0)
         if contingentes_bruto > 0 or regulatorio != 0 or outros_deduzidos != 0:
             if contingentes_bruto > 0:
-                print(f"• Passivos Contingentes (Bruto): R$ {contingentes_bruto:,.2f} Mi (Líquido IR/CSLL 34%: R$ {detalhes.get('passivos_contingentes_liquidos', 0):,.2f} Mi)")
+                contingentes_liq = detalhes.get("passivos_contingentes_liquidos", 0)
+                beneficio_fiscal = detalhes.get("beneficio_fiscal_quase_divida_mi", 0)
+                aliquota_efetiva = (beneficio_fiscal / contingentes_bruto * 100.0) if contingentes_bruto > 0 else 0.0
+                print(
+                    f"• Passivos Contingentes (Bruto): R$ {contingentes_bruto:,.2f} Mi "
+                    f"(Líquido c/ Benefício Fiscal Efetivo de {aliquota_efetiva:.1f}%: R$ {contingentes_liq:,.2f} Mi)"
+                )
             if regulatorio != 0:
                 if regulatorio < 0:
                     print(f"• Ativo Regulatório Líquido: R$ {abs(regulatorio):,.2f} Mi")
                 else:
                     print(f"• Passivo Regulatório: R$ {regulatorio:,.2f} Mi")
+            if outros_nao_ded != 0:
+                print(f"• Outros Passivos Não-Dedutíveis: R$ {outros_nao_ded:,.2f} Mi")
             print(f"• Dívida Total Ajustada: R$ {detalhes['divida_total_ajustada']:,.2f} Mi")
 
         val_cresc = detalhes.get("validacao_crescimento")
@@ -104,8 +113,9 @@ def print_dossier_summary(resultado: Dict[str, Any], output_path: Path):
             print(f"• ⚠ Alerta Prazo de Acordo: {meta_dict['alerta_prazo_acordo']}")
 
     elif modelo == "sotp_holding":
-        print(f"• Soma das Partes (NAV Bruto Mercado): R$ {detalhes.get('total_mercado_bruto_mi', 0):,.2f} Mi")
-        print(f"• Soma das Partes (NAV Bruto Intrínseco): R$ {detalhes.get('total_intrinseco_bruto_mi', 0):,.2f} Mi")
+        qtd_part = len(detalhes.get("participacoes", []))
+        print(f"• Participações Societárias Avaliadas no SOTP: {qtd_part} investida(s)")
+        print("• Soma das Partes (NAV Bruto Mercado e Intrínseco): [Preservado no JSON para Modo Cego]")
         print(f"• Dívida Líquida Própria da Holding: R$ {detalhes.get('divida_liquida_holding_mi', 0):,.2f} Mi")
         if detalhes.get("vp_despesas_adm_holding_mi", 0) > 0:
             print(f"• VP Despesas Administrativas da Holding: R$ {detalhes['vp_despesas_adm_holding_mi']:,.2f} Mi")

@@ -49,7 +49,8 @@ def main():
     dcf_p.add_argument("--fco", type=float, default=None)
     dcf_p.add_argument("--juros-pagos", type=float, default=None, help="Despesas financeiras pagas (valor positivo)")
     dcf_p.add_argument("--capex-projetado", type=float, default=None)
-    dcf_p.add_argument("--taxas", type=float, nargs="+", required=True)
+    dcf_p.add_argument("--taxas", type=float, nargs="+", default=None)
+    dcf_p.add_argument("--fluxos-explicitos", type=float, nargs="+", default=None, help="Vetor explícito de FCFF projetados (R$ Mi) para projetos em Curva J")
     dcf_p.add_argument("--wacc", type=float, required=True)
     dcf_p.add_argument("--cresc-perp", type=float, required=True)
     dcf_p.add_argument("--divida-liq", type=float, required=True)
@@ -57,7 +58,7 @@ def main():
     dcf_p.add_argument("--passivos-contingentes", type=float, default=0.0)
     dcf_p.add_argument("--passivos-regulatorios", type=float, default=None)
     dcf_p.add_argument("--aliquota-ir", type=float, default=34.0)
-    dcf_p.add_argument("--pct-contingencia-dedutivel", type=float, default=0.0)
+    dcf_p.add_argument("--pct-contingencia-dedutivel", type=float, default=None)
     dcf_p.add_argument("--num-acoes", type=float, required=True)
     dcf_p.add_argument("--margem", type=float, default=20.0)
     dcf_p.add_argument("--dpa", type=float, default=0.0)
@@ -70,9 +71,14 @@ def main():
     dcf_p.add_argument("--decomposicao-g1", type=float, nargs=3, metavar=("IPCA", "VOLUME", "PRICING"), default=None, help="Decomposição da taxa g1 em 3 vetores: IPCA Volume Share/Pricing")
     dcf_p.add_argument("--analise-competitiva", default="", help="Racional competitivo ou tese de mercado")
     dcf_p.add_argument("--justificativa", default="")
-    dcf_p.add_argument("--capex-minimo-historico", type=float, default=None, help="Parâmetro Telecom: Força queda do preço-teto (aumentando margem de segurança) caso o risco de queima de caixa seja muito alto")
+    dcf_p.add_argument("--capex-minimo-historico", type=float, default=None, help="Parâmetro Telecom: Normaliza o CapEx mínimo sustentável no fluxo livre inicial")
     dcf_p.add_argument("--ifrs16-expurgado", action="store_true", default=False, help="Parâmetro Telecom: Confirma que o passivo de arrendamento IFRS 16 foi expurgado da dívida para não penalizar em duplicidade")
     dcf_p.add_argument("--teto-crescimento-oligopolio", type=float, default=None, help="Parâmetro Telecom: Força teto máximo para a taxa inicial G1 em mercados oligopolizados")
+    dcf_p.add_argument("--alavancagem-otima-pct", type=float, default=None, help="Alavancagem ótima setorial D/(D+E) (%%) para piso de WACC com escudo fiscal")
+    dcf_p.add_argument("--prazo-concessao-anos", type=int, default=None, help="Prazo contratual remanescente total da concessão em anos")
+    dcf_p.add_argument("--rab-indenizavel-mi", type=float, default=0.0, help="Base de Ativos Regulatórios (RAB) indenizável ao final da concessão (R$ Mi)")
+    dcf_p.add_argument("--sem-juros-no-fco", action="store_true", default=False, help="Indica que os juros pagos já foram classificados no FCF (CPC 03)")
+    dcf_p.add_argument("--normalizar-capex-fluxo", action="store_true", default=True, help="Deduz eventual déficit de CapEx diretamente no FCFF inicial (padrão)")
     dcf_p.add_argument("--out")
 
     # 3. FINANCIALS
@@ -110,8 +116,12 @@ def main():
     hld_p.add_argument("--dpa", type=float, default=None)
     hld_p.add_argument("--despesas-adm", type=float, default=0.0)
     hld_p.add_argument("--ke-holding", type=float, default=12.0)
+    hld_p.add_argument("--aliquota-ir-holding", type=float, default=0.0)
     hld_p.add_argument("--pct-jcp", type=float, default=0.0)
     hld_p.add_argument("--participacoes-json")
+    hld_p.add_argument("--investida-ticker", default="ITUB4", help="Ticker da investida principal")
+    hld_p.add_argument("--investida-nome", default="Itaú Unibanco", help="Nome da investida principal")
+    hld_p.add_argument("--investida-valuation-json", default=None, help="Caminho para o JSON de valuation da investida (preserva Modo Cego)")
     hld_p.add_argument("--itub-acoes", type=float, default=0.0)
     hld_p.add_argument("--itub-preco-mercado", type=float, default=0.0)
     hld_p.add_argument("--itub-preco-justo", type=float, default=0.0)
@@ -191,10 +201,13 @@ def main():
     meta["trimestre_itr_auditado"] = args.trimestre_itr
 
     if args.command == "dcf":
-        if args.fclf is None and (args.fco is None or args.juros_pagos is None or args.capex_projetado is None):
-            parser.error("É necessário informar --fclf OU (--fco E --juros-pagos E --capex-projetado) no modelo DCF.")
-        if args.fclf is not None and (args.fco is not None or args.juros_pagos is not None or args.capex_projetado is not None):
-            parser.error("Informe --fclf OU (--fco, --juros-pagos E --capex-projetado), não ambos.")
+        if not args.fluxos_explicitos:
+            if args.fclf is None and (args.fco is None or (args.juros_pagos is None and not args.sem_juros_no_fco) or args.capex_projetado is None):
+                parser.error("É necessário informar --fclf OU (--fco E --juros-pagos E --capex-projetado) OU --fluxos-explicitos no modelo DCF.")
+            if args.fclf is not None and (args.fco is not None or args.juros_pagos is not None or args.capex_projetado is not None):
+                parser.error("Informe --fclf OU (--fco, --juros-pagos E --capex-projetado), não ambos.")
+            if not args.taxas:
+                parser.error("É necessário informar --taxas ou --fluxos-explicitos no modelo DCF.")
 
         resultado = calculate_dcf(
             ticker=args.ticker,
@@ -227,6 +240,12 @@ def main():
             juros_pagos=args.juros_pagos,
             capex_projetado=args.capex_projetado,
             ntnb=args.ntnb,
+            alavancagem_otima_pct=args.alavancagem_otima_pct,
+            prazo_concessao_anos=args.prazo_concessao_anos,
+            rab_indenizavel_mi=args.rab_indenizavel_mi,
+            fluxos_explicitos=args.fluxos_explicitos,
+            juros_pagos_no_fco=not args.sem_juros_no_fco,
+            normalizar_capex_fluxo=args.normalizar_capex_fluxo,
         )
     elif args.command == "financials":
         resultado = calculate_financials_ddm(
@@ -261,13 +280,21 @@ def main():
             with open(args.participacoes_json, "r", encoding="utf-8") as f:
                 participacoes = json.load(f)
         else:
+            preco_justo_investida = args.itub_preco_justo if args.itub_preco_justo > 0 else None
+            if getattr(args, "investida_valuation_json", None):
+                with open(args.investida_valuation_json, "r", encoding="utf-8") as f_inv:
+                    inv_data = json.load(f_inv)
+                    pj = inv_data.get("precoJusto", inv_data.get("preco_justo"))
+                    if pj is not None and float(pj) > 0:
+                        preco_justo_investida = float(pj)
+
             if args.itub_acoes > 0:
                 participacoes.append({
-                    "nome": "Itaú Unibanco",
-                    "ticker": "ITUB4",
+                    "nome": args.investida_nome,
+                    "ticker": args.investida_ticker,
                     "quantidade_acoes": args.itub_acoes,
                     "preco_mercado": args.itub_preco_mercado,
-                    "preco_justo_intrinseco": args.itub_preco_justo if args.itub_preco_justo > 0 else None,
+                    "preco_justo_intrinseco": preco_justo_investida,
                     "dpa_esperado": args.itub_dpa,
                 })
             if args.outros_ativos_mercado > 0 or args.outros_ativos_justo > 0:
@@ -293,6 +320,8 @@ def main():
             empresa=args.empresa,
             setor=args.setor,
             metadata=meta,
+            ntnb=args.ntnb,
+            aliquota_ir_holding_pct=args.aliquota_ir_holding,
         )
     elif args.command == "saude":
         resultado = calculate_operadora_saude(

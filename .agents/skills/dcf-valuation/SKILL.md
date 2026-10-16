@@ -65,7 +65,7 @@ flowchart TD
 
 #### 1.1 Levantamento Histórico Obrigatório (3 a 5 Anos - Anti-Distorção de Base):
 * Colete a série histórica de **Receita Líquida, EBITDA e Fluxo de Caixa Livre da Firma (FCFF)** dos últimos 3 exercícios fechados.
-* **[ATENÇÃO - REGRA DO FCFF]:** A fórmula matemática para calcular o FCFF requer somar o benefício fiscal da dívida de volta ao FCO antes de deduzir o CapEx. O Motor Python fará essa conta automaticamente para você de forma livre de erros: basta inserir o FCO bruto, as Despesas Financeiras Pagas (Juros) e o CapEx nos parâmetros da CLI (`--fco`, `--juros-pagos` e `--capex-projetado`). NUNCA calcule o FCFF mentalmente usando apenas "FCO - CapEx" ou correremos o risco de dupla penalização da dívida.
+* **[ATENÇÃO - REGRA DO FCFF]:** A fórmula matemática para calcular o FCFF requer somar o benefício fiscal da dívida de volta ao FCO antes de deduzir o CapEx. O Motor Python fará essa conta automaticamente para você de forma livre de erros: basta inserir o FCO bruto, as Despesas Financeiras Pagas (Juros) e o CapEx nos parâmetros da CLI (`--fco`, `--juros-pagos` e `--capex-projetado`). NUNCA calcule o FCFF mentalmente usando apenas "FCO - CapEx" ou correremos o risco de dupla penalização da dívida. *(Ressalva CPC 03 / IAS 7: Caso as demonstrações contábeis da empresa classifiquem os Juros Pagos no Fluxo de Financiamento em vez do Fluxo Operacional, o FCO já se encontra antes dos juros; nesse caso, utilize `--sem-juros-no-fco` na CLI para evitar dupla contagem).*
 * Calcule a média histórica do FCFF e o CAGR histórico de 3 anos.
 * Identifique distorções não recorrentes: créditos tributários extraordinários, descompassos temporários de capital de giro (NCG) ou M&A inorgânico (ex: compra da Oi Móvel).
 
@@ -100,6 +100,7 @@ Antes de arbitrar o crescimento, classifique a empresa em um dos 3 regimes de me
    * O motor Python aplica automaticamente o benefício fiscal de dedutibilidade de 34% (IRPJ/CSLL) sobre essas contingências, garantindo que o **Cenário Ajustado por Quase-Dívidas** reflita o passivo líquido real que o acionista terá que honrar.
 4. **Base Acionária:** Total de ações emitidas líquidas de tesouraria (Milhões).
 5. **DPA Projetado:** Dividendo por ação esperado e percentual em JCP para métricas de Décio Bazin (6% e 8%).
+6. **Parâmetros de Concessão e Estrutura de Capital:** Para concessões com prazo finito (rodovias, distribuição, saneamento contratual), colete o prazo contratual remanescente (em anos a partir do ano-base, `--prazo-concessao-anos`) e o saldo da Base de Ativos Regulatórios (RAB) indenizável ao final do contrato (`--rab-indenizavel-mi`), além da alavancagem ótima setorial (`--alavancagem-otima-pct`, `Dívida / (Dívida + Equity)`).
 
 #### 🧭 Subfase 2.1: Triângulo de Validação do Crescimento ($g$) e Base ($FCFF_0$)
 Para evitar arbitrariedade nas taxas projetadas ($g_1 \dots g_5$), aplique o triângulo fundamentalista:
@@ -110,6 +111,7 @@ Para evitar arbitrariedade nas taxas projetadas ($g_1 \dots g_5$), aplique o tri
 * **Âncora 3: Decomposição Vetorial da Taxa Inicial ($g_1$):**
   A taxa $g_1$ deve ser explicitada como a soma de três vetores econômicos:
   $$g_1 = \underbrace{\text{IPCA Esperado}}_{\text{Repasse Inflacionário}} + \underbrace{\Delta \text{Volume Setor/PIB}}_{\text{Crescimento da Indústria}} + \underbrace{\Delta \text{Market Share / Pricing Power}}_{\text{Diferencial Competitivo}}$$
+  *(Atenção: A soma aritmética dos 3 vetores informados em `--decomposicao-g1` deve coincidir exatamente com a primeira taxa `G1` de `--taxas`, com tolerância máxima de 0,05 p.p., sob pena de rejeição com `ValueError` pelo motor Python).*
 * **Trajetória de Convergência Monotônica:**
   As taxas explícitas ($g_1, g_2, \dots, g_5$) devem decair de forma suave e contínua, convergindo para a taxa de crescimento perpétuo ($g_{\text{perp}}$).
 
@@ -132,10 +134,10 @@ Para evitar arbitrariedade nas taxas projetadas ($g_1 \dots g_5$), aplique o tri
 5. **Fluxo de Proventos Recebidos:** Dividendos pagos pelas investidas menos custos de estrutura da holding.
 
 #### Para Fluxo D (Operadoras de Saúde ANS):
-1. **Receita Líquida:** Contraprestações emitidas de planos de saúde.
-2. **MLR (Sinistralidade Médica %):** Eventos indenizáveis / Receita Líquida.
-3. **Resultado Financeiro:** Separado em duas variáveis essenciais: `--ganhos-float` (rendimento do *float* das reservas técnicas, que escala com a receita) e `--despesas-juros-fixa` (juros da dívida, que permanecem flat). O motor projeta as duas dinâmicas separadamente.
-4. **Retenção para Margem de Solvência da ANS (%):** Capital regulatório retido.
+1. **Receita Líquida:** Contraprestações emitidas de planos de saúde (`--receita`).
+2. **MLR (Sinistralidade Médica %) e Despesas Operacionais (%):** Eventos indenizáveis / Receita Líquida (`--mlr`) e Despesas Administrativas + Comerciais / Receita Líquida (`--despesas-op`).
+3. **Resultado Financeiro:** Separado em duas variáveis essenciais: `--ganhos-float` (rendimento do *float* das reservas técnicas, que escala com a receita) e `--despesas-juros-fixa` (juros da dívida, que permanecem flat nos anos explícitos). O motor projeta as duas dinâmicas separadamente.
+4. **Retenção ANS (%) e Payout Sustentável (%):** Fator $k$ de capital regulatório retido sobre a expansão da receita (`--retencao-ans`) e percentual de distribuição do lucro distribuível pós-ANS (`--payout`).
 5. **Custo de Capital Próprio ($K_e$).**
 
 ---
@@ -181,11 +183,11 @@ Onde $R_{f,\text{nominal}} = (1 + R_{f,\text{real}}) \times (1 + \text{Inflaçã
 
 #### 🛡️ Subfase 4.1: Teste de Sanidade Econômica Obrigatório Pré-Finalização
 Ao executar os scripts do motor Python, o agente deve **obrigatoriamente verificar a saída do terminal**. Se o motor emitir o aviso `• ⚠ ALERTA METODOLÓGICO:`, o agente DEVE interromper a resposta, revisar suas premissas e corrigir a distorção antes de apresentar o dossiê:
-* **Spread de Desconto Máximo $(K_e - g) \le 10,50\%$:** Em empresas defensivas de alta rentabilidade (seguradoras, saneamento, energia), o spread perpétuo $(K_e - g)$ **não deve exceder 10,50%**. Spreads acima disso equivalem a exigir que a empresa pague dividend yields perpétuos estratosféricos (> 11% a 13%) indefinidamente, denunciando sobretaxação de $K_e$ decorrente de estresse pontual de mercado secundário.
+* **Spread de Desconto Dinâmico $(K_e - g)$:** Em empresas defensivas de alta rentabilidade (bancos, seguradoras, saneamento, energia), o spread perpétuo $(K_e - g)$ é aferido dinamicamente contra a ETTJ da NTN-B ($\max(10,50\%, R_{f,\text{nom}} + 6,00\% - g_{\text{perp}})$). Spreads acima desse teto dinâmico denunciam sobretaxação de $K_e$ além do prêmio de risco setorial.
 
 #### Comandos de Execução por Tipo de Empresa:
 
-**1. Para Concessões, Utilities e Indústria (DCF com Triângulo de Crescimento):**
+**1. Para Concessões, Utilities, Telecom e Indústria (DCF com Triângulo de Crescimento):**
 ```bash
 python valuation_cli.py \
   --ano-base <ANO_BASE_DFP> \
@@ -198,10 +200,10 @@ python valuation_cli.py \
   --capex-projetado <CAPEX_INICIAL_MI> \
   --taxas <G1> <G2> <G3> <G4> <G5> \
   --wacc <WACC_PCT> \
+  --alavancagem-otima-pct <ALAVANCAGEM_OTIMA_PCT> \
   --cresc-perp <G_PERP_PCT> \
   --divida-liq <DIVIDA_FINANCEIRA_LIQ_MI> \
   --passivos-contingentes <PASSIVOS_DEDUTIVEIS_MI> \
-  --pct-contingencia-dedutivel <PCT_DEDUTIVEL> \
   --num-acoes <ACOES_MI> \
   --margem 20.0 \
   --dpa <DPA_PROJETADO> \
@@ -213,6 +215,7 @@ python valuation_cli.py \
   --empresa "<NOME>" \
   --setor "<SETOR>"
 ```
+*(Notas adicionais para Concessões e Telecom: Para empresas de Telecomunicações, adicione obrigatoriamente `--ifrs16-expurgado` e `--capex-minimo-historico <CAPEX_MIN_MI>`. Para concessões de prazo contratual finito, adicione `--prazo-concessao-anos <ANOS_REMANESCENTES>` e `--rab-indenizavel-mi <RAB_MI>`. Para projetos em Curva "J" com fluxos iniciais negativos, substitua `--fco`/`--taxas` por `--fluxos-explicitos <FCF1> <FCF2> <FCF3> <FCF4> <FCF5>`).*
 
 **2. Para Bancos e Seguradoras (Gordon & DDM):**
 *Para Bancos:*
@@ -228,6 +231,7 @@ python valuation_cli.py \
   --ke <KE_PCT> \
   --cresc-perp <G_PERP_PCT> \
   --payout <PAYOUT_PCT> \
+  --pct-jcp <PCT_JCP> \
   --num-acoes <ACOES_MI> \
   --margem 20.0 \
   --tipo banco \
@@ -252,6 +256,7 @@ python valuation_cli.py \
   --cresc-perp <G_PERP_PCT> \
   --taxas <G1> <G2> <G3> <G4> <G5> \
   --payout <PAYOUT_PCT> \
+  --pct-jcp <PCT_JCP> \
   --num-acoes <ACOES_MI> \
   --margem 20.0 \
   --tipo seguradora \
@@ -262,9 +267,9 @@ python valuation_cli.py \
   --sinistralidade-media-5a <SINISTRALIDADE_MEDIA_5A_PCT> \
   --prazo-acordo-anos <PRAZO_ACORDO_ANOS>
 ```
-*(Nota: O parâmetro `--taxas` ativa o DDM Multiestágio com rampa de convergência de 5 anos; omita-o apenas se a instituição estiver madura em crescimento puramente inflacionário).*
+*(Nota: O parâmetro `--taxas` ativa o DDM Multiestágio com alinhamento temporal $t=1\dots 5$ e contabilidade Clean Surplus; omita-o apenas se a instituição estiver madura em crescimento puramente inflacionário).*
 
-**3. Para Holdings (SOTP Intrínseco & Mercado):**
+**3. Para Holdings (SOTP Intrínseco & Mercado com Preservação do Modo Cego):**
 ```bash
 python valuation_cli.py \
   --ano-base <ANO_BASE_DFP> \
@@ -272,18 +277,24 @@ python valuation_cli.py \
   --ntnb <TAXA_NTNB_ATUAL> \
   holding \
   --ticker ITSA4 \
+  --investida-ticker ITUB4 \
+  --investida-nome "Itaú Unibanco" \
+  --investida-valuation-json valuations/ITUB4_valuation.json \
   --itub-acoes 3500.0 \
   --itub-preco-mercado <COTACAO_ITUB> \
-  --itub-preco-justo <PRECO_JUSTO_ITUB_DO_FLUXO_B> \
   --itub-dpa <DPA_ITUB> \
   --outros-ativos-mercado <OUTROS_MERCADO_MI> \
   --outros-ativos-justo <OUTROS_JUSTO_MI> \
   --outros-ativos-dpa <OUTROS_PROVENTOS_MI> \
   --divida-holding <DIVIDA_ITSA_MI> \
+  --despesas-adm <DESPESAS_ADM_MI> \
+  --ke-holding <KE_HOLDING_PCT> \
+  --pct-jcp <PCT_JCP> \
   --num-acoes 10300.0 \
   --desconto 20.0 \
   --margem 20.0
 ```
+*(Nota Anti-Vazamento: Use sempre `--investida-valuation-json valuations/<TICKER_INVESTIDA>_valuation.json` para que o próprio motor Python carregue internamente o `precoJusto` da investida principal sem que o agente precise ler o arquivo JSON).*
 
 **4. Para Operadoras de Saúde ANS:**
 ```bash
@@ -300,6 +311,7 @@ python valuation_cli.py \
   --despesas-juros-fixa <JUROS_MI> \
   --retencao-ans <FATOR_K_ANS_PCT> \
   --payout <PAYOUT_PCT> \
+  --pct-jcp <PCT_JCP> \
   --ke <KE_PCT> \
   --cresc-perp <G_PERP_PCT> \
   --taxas <G1> <G2> <G3> <G4> <G5> \
@@ -308,7 +320,7 @@ python valuation_cli.py \
   --empresa "<NOME>" \
   --setor "Saúde Suplementar"
 ```
-*(Nota: O parâmetro `--taxas` é opcional e projeta o crescimento explícito da receita/vidas nos primeiros anos; omita-o se a operadora estiver em regime estável de crescimento perpétuo).*
+*(Nota: O parâmetro `--taxas` é opcional e projeta o crescimento explícito da receita/vidas nos primeiros anos, capitalizando a retenção voluntária no float e convergindo para o FCFE Regulatório na perpetuidade).*
 
 ---
 
@@ -318,15 +330,17 @@ Após executar o script correspondente, apresente o Dossiê das Premissas no cha
 2. **Validação do Triângulo de Crescimento:** Apresente o CAGR histórico, a dinâmica de market share e a decomposição de $g_1$.
 3. **Taxa de Desconto ($WACC$ ou $K_e$):** Abra todos os componentes macroeconômicos ($R_f$, inflação, beta, ERP).
 4. **Estrutura Patrimonial:** Dívida financeira líquida, quase-dívidas regulatórias/atuariais e número de ações.
-5. **Métrica Previdenciária de Bazin:** DPA adotado e confirmação de integração dos Tetos de 6% e 8% no JSON.
+5. **Métrica Previdenciária de Bazin:** DPA líquido adotado (após IRRF sobre JCP) e confirmação de integração dos Tetos de 6% e 8% no JSON.
 6. **Caminho do Arquivo:** Informe o caminho `valuations/<TICKER>_valuation.json` pronto para ser importado na Calculadora Web.
-7. **Filtro "Zero Yield":** Verifique se o Dividend Yield projetado para o Ano 1 está abaixo da taxa Selic líquida. Se sim, force a recomendação para "Aguardar / Acumular Renda Fixa", não importando o desconto para o Preço Justo.
+7. **Matriz de Elegibilidade Previdenciária (Compatível com o Modo Cego):** Classifique qualitativamente o papel da empresa na carteira sem violar o Modo Cego:
+   * **Perfil A — Renda Passiva Imediata (*Cash Cows*):** Empresas maduras com alto *payout* atual ($\ge 50\%$) e baixa necessidade de CapEx incremental (ex: Transmissoras maduras, Seguradoras, Grandes Bancos). A atratividade para renda imediata é governada pelos Tetos de Bazin (6% e 8% líquidos) salvos no JSON.
+   * **Perfil B — *Compounders* de Infraestrutura / Expansão de RAB:** Concessionárias ou indústrias em ciclo intenso de CapEx com *payout* temporariamente reduzido no Ano 1, mas com $\text{ROIC Marginal} > \text{WACC}$ e forte desalavancagem/expansão de FCFF projetada até o Ano 5. Avalie a elegibilidade pelo potencial de crescimento composto do FCFF e pelo *Yield-on-Cost* projetado na maturação do ciclo ($\text{YoC}_{\text{Ano 5}}$), sem descartar o ativo por baixo dividendo no Ano 1.
 
 ---
 
 ### 🛡️ Regras de Conduta para Interações e Dúvidas Pós-Valuation:
-1. **Preservação Contínua do Modo Cego:** Se o usuário fizer perguntas sobre como o cálculo foi feito ou solicitar a memória matemática, explique as fórmulas e os percentuais, mas **nunca revele o Equity Value ou o Preço por Ação no chat**. Instrua o usuário a conferir os valores finais na interface web ou abrindo o arquivo JSON.
+1. **Preservação Contínua do Modo Cego:** Se o usuário fizer perguntas sobre como o cálculo foi feito ou solicitar a memória matemática, explique as fórmulas e os percentuais, mas **nunca revele o Equity Value, o NAV Bruto/Líquido ou o Preço por Ação no chat**. Instrua o usuário a conferir os valores finais na interface web ou abrindo o arquivo JSON.
 2. **Compromisso de Veracidade e Anti-Confabulação:** Quando questionado se determinada análise (como *market share*, dados de concorrentes ou relatórios trimestrais) foi considerada, reporte estritamente o que foi consultado e modelado nos fatos. Nunca afirme ter conduzido análises que não foram efetivamente realizadas nas etapas de coleta.
-3. **Vedação de Leitura Pós-Escrita (Anti-Loophole):** O arquivo gerado em `valuations/` é WRITE-ONLY para o agente. É ESTRITAMENTE PROIBIDO usar ferramentas (`view_file`, `cat`, `grep`) para ler o JSON e descobrir o Preço Justo/Teto antes ou durante as interações com o usuário.
+3. **Vedação de Leitura Pós-Escrita (Anti-Loophole):** O arquivo gerado em `valuations/` é WRITE-ONLY para o agente. É ESTRITAMENTE PROIBIDO usar ferramentas (`view_file`, `cat`, `grep`) para ler o JSON e descobrir o Preço Justo/Teto antes ou durante as interações com o usuário. Para SOTP de Holdings, utilize exclusivamente `--investida-valuation-json`.
 4. **Bloqueio de Engenharia Reversa em Premissas:** A decomposição do crescimento $g_1$ e demais premissas macroeconômicas deve ser baseada **exclusivamente** na coleta de dados (IPCA projetado, PIB, relatórios setoriais), e NUNCA através de subtração reversa de uma meta ancorada. É vedada a 'confabulação matemática'.
 5. **Governança Front-Back (Single Source of Truth):** O Motor Python é a ÚNICA fonte da verdade matemática. A Calculadora Web atua primariamente como interface de leitura (Read-Only) que deve exibir os cálculos exatos processados em Python (incluindo deduções tributárias e passivos). A reatividade JS só deve ser ativada se o usuário explicitamente simular cenários alterando os inputs.

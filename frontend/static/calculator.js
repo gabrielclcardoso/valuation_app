@@ -129,7 +129,8 @@ document.addEventListener("alpine:init", () => {
       if (det.despesas_adm_comerciais_pct !== undefined) this.despesasOpSaude = parseNum(det.despesas_adm_comerciais_pct, 10);
       if (det.fator_capital_ans_k_pct !== undefined) this.retencaoAns = parseNum(det.fator_capital_ans_k_pct, 10);
       else if (det.exigencia_capital_ans_pct !== undefined) this.retencaoAns = parseNum(det.exigencia_capital_ans_pct, 10);
-      if (det.resultado_financeiro_float_mi !== undefined) this.resultadoFinanceiro = parseNum(det.resultado_financeiro_float_mi, 0);
+      const rfImportado = det.resultado_financeiro_liquido_mi ?? det.resultado_financeiro_float_mi;
+      if (rfImportado !== undefined) this.resultadoFinanceiro = parseNum(rfImportado, 0);
       if (det.payout_sustentavel_pct !== undefined && this.modeloAtual === "saude_ans") {
         this.payoutSaude = parseNum(det.payout_sustentavel_pct, 60);
       }
@@ -163,9 +164,10 @@ document.addEventListener("alpine:init", () => {
         base.sinistralidade_mlr_pct = parseNum(this.sinistralidadeMlr, 80);
         base.despesas_adm_comerciais_pct = parseNum(this.despesasOpSaude, 10);
         base.fator_capital_ans_k_pct = parseNum(this.retencaoAns, 10);
+        base.resultado_financeiro_liquido_mi = parseNum(this.resultadoFinanceiro, 0);
         base.resultado_financeiro_float_mi = parseNum(this.resultadoFinanceiro, 0);
         base.retencao_reserva_solvencia_ans_mi = this.resultados.retencaoSolvenciaAns;
-        base.divida_liquida_deduzida_mi = parseNum(this.dividaLiquida, 0);
+        base.divida_liquida_deduzida_mi = 0.0;
       }
       return base;
     },
@@ -400,6 +402,10 @@ document.addEventListener("alpine:init", () => {
         this.restaurarParametrosDoModelo(this.detalhesValuation);
       }
 
+      this.importedPrecoJusto = item.preco_justo !== undefined ? parseNum(item.preco_justo) : (item.precoJusto !== undefined ? parseNum(item.precoJusto) : null);
+      this.importedPrecoTeto = item.preco_teto !== undefined ? parseNum(item.preco_teto) : (item.precoTeto !== undefined ? parseNum(item.precoTeto) : null);
+      this.parametrosModificados = false;
+
       this.ocultarResultados = false;
       this.mudarAba("calculadora");
     },
@@ -472,29 +478,65 @@ document.addEventListener("alpine:init", () => {
         erro = "Número de ações deve ser maior que zero.";
       }
 
-      // Projeções básicas de fluxo (DCF)
+      // Projeções básicas de fluxo (DCF: taxa de crescimento ou Curva J explícita)
       let fluxoAtual = parseNum(this.fclf, 0);
       let somaPV = 0;
       let projecoes = [];
 
-      for (let i = 1; i <= this.anosProjecao; i++) {
-        const g = parseNum(this.taxasCrescimento[i - 1], 0) / 100;
-        fluxoAtual = fluxoAtual * (1 + g);
-        const pv = r > -1 ? fluxoAtual / Math.pow(1 + r, i) : 0;
-        somaPV += pv;
-        projecoes.push({
-          ano: i,
-          g: (g * 100).toFixed(2),
-          fcf: fluxoAtual,
-          vp: pv,
-        });
+      const hasExplicitJCurve =
+        this.modeloAtual === "dcf_fcff" &&
+        fluxoAtual <= 0 &&
+        Array.isArray(this.detalhesValuation?.projecoes) &&
+        this.detalhesValuation.projecoes.length > 0;
+
+      if (hasExplicitJCurve) {
+        const expProjs = this.detalhesValuation.projecoes;
+        for (let i = 0; i < expProjs.length; i++) {
+          const t = i + 1;
+          const fcfT = parseNum(expProjs[i].fclf_projetado, 0);
+          const gPct = parseNum(expProjs[i].crescimento_pct, 0);
+          const pv = r > -1 ? fcfT / Math.pow(1 + r, t) : 0;
+          somaPV += pv;
+          fluxoAtual = fcfT;
+          projecoes.push({
+            ano: t,
+            g: gPct.toFixed(2),
+            fcf: fcfT,
+            vp: pv,
+          });
+        }
+      } else {
+        for (let i = 1; i <= this.anosProjecao; i++) {
+          const g = parseNum(this.taxasCrescimento[i - 1], 0) / 100;
+          fluxoAtual = fluxoAtual * (1 + g);
+          const pv = r > -1 ? fluxoAtual / Math.pow(1 + r, i) : 0;
+          somaPV += pv;
+          projecoes.push({
+            ano: i,
+            g: (g * 100).toFixed(2),
+            fcf: fluxoAtual,
+            vp: pv,
+          });
+        }
       }
 
-      const fcfAnoSeguinte = fluxoAtual * (1 + gPerp);
-      const valorTerminal = r > gPerp ? fcfAnoSeguinte / (r - gPerp) : 0;
-      const vpTerminal = r > -1 ? valorTerminal / Math.pow(1 + r, this.anosProjecao) : 0;
-      const ev = somaPV + vpTerminal;
-      const equity = ev - dLiquida;
+      const periodoExplicito = projecoes.length || this.anosProjecao;
+      let fcfAnoSeguinte = fluxoAtual * (1 + gPerp);
+      let valorTerminal = 0;
+      const prazoConcessao = this.detalhesValuation?.metadata?.prazo_concessao_anos;
+      if (this.modeloAtual === "dcf_fcff" && prazoConcessao !== undefined && prazoConcessao !== null && r > gPerp) {
+        const anosRem = Math.max(0, parseInt(prazoConcessao) - periodoExplicito);
+        const fatorAnuidade = anosRem > 0 ? (1 - Math.pow((1 + gPerp) / (1 + r), anosRem)) : 0;
+        const vtAnuidade = anosRem > 0 ? (fcfAnoSeguinte / (r - gPerp)) * fatorAnuidade : 0;
+        const rabMi = parseNum(this.detalhesValuation?.metadata?.rab_indenizavel_mi, 0);
+        const vpRabEmT = rabMi > 0 ? rabMi / Math.pow(1 + r, anosRem) : 0;
+        valorTerminal = vtAnuidade + vpRabEmT;
+      } else {
+        valorTerminal = r > gPerp ? fcfAnoSeguinte / (r - gPerp) : 0;
+      }
+      let vpTerminal = r > -1 ? valorTerminal / Math.pow(1 + r, periodoExplicito) : 0;
+      let ev = somaPV + vpTerminal;
+      let equity = ev - dLiquida;
 
       let precoJusto = 0;
       let precoTeto = 0;
@@ -509,13 +551,45 @@ document.addEventListener("alpine:init", () => {
       if (this.modeloAtual === "gordon_ddm") {
         const vpaVal = parseNum(this.vpa, 20);
         const roeVal = parseNum(this.roe, 18) / 100;
+        const payoutEfetivo = parseNum(this.payoutBanco, 0) / 100;
 
         if (vpaVal > 0 && roeVal > 0 && r > gPerp) {
           pVp = Math.max(0, (roeVal - gPerp) / (r - gPerp));
-          precoJusto = pVp * vpaVal;
-          // Payout sustentável = 1 - g/ROE
+          const precoGordon = pVp * vpaVal;
+          // Payout sustentável perpétuo = 1 - g/ROE
           const payoutSust = Math.max(0, Math.min(1, 1 - (gPerp / roeVal)));
-          dpaReativo = vpaVal * roeVal * payoutSust;
+          const payoutUsado = payoutEfetivo > 0 ? payoutEfetivo : payoutSust;
+          const lpaTeorico = vpaVal * roeVal;
+          dpaReativo = lpaTeorico * payoutUsado;
+
+          const hasMultistage = Array.isArray(this.detalhesValuation?.projecoes_dpa) && this.detalhesValuation.projecoes_dpa.length > 0;
+          if (hasMultistage && this.anosProjecao > 0) {
+            const g1Dec = parseNum(this.taxasCrescimento[0], 0) / 100;
+            let dpaAtual = (1 + g1Dec) > 0 ? (dpaReativo / (1 + g1Dec)) : dpaReativo;
+            let lpaAtual = (1 + g1Dec) > 0 ? (lpaTeorico / (1 + g1Dec)) : lpaTeorico;
+            let somaPvDpa = 0;
+            const projecoesDdm = [];
+            for (let i = 1; i <= this.anosProjecao; i++) {
+              const g = parseNum(this.taxasCrescimento[i - 1], 0) / 100;
+              dpaAtual = dpaAtual * (1 + g);
+              lpaAtual = lpaAtual * (1 + g);
+              const pv = dpaAtual / Math.pow(1 + r, i);
+              somaPvDpa += pv;
+              projecoesDdm.push({
+                ano: i,
+                g: (g * 100).toFixed(2),
+                fcf: dpaAtual * nAcoes,
+                vp: pv * nAcoes,
+              });
+            }
+            const lpaTerm = lpaAtual * (1 + gPerp);
+            const dpaTerm = lpaTerm * payoutSust;
+            const vtDpa = ( dpaTerm / (r - gPerp) ) / Math.pow(1 + r, this.anosProjecao);
+            precoJusto = Math.max(0, somaPvDpa + vtDpa);
+            projecoes = projecoesDdm;
+          } else {
+            precoJusto = precoGordon;
+          }
         } else if (nAcoes > 0 && r > gPerp) {
           precoJusto = Math.max(0, ev / nAcoes);
         }
@@ -524,20 +598,35 @@ document.addEventListener("alpine:init", () => {
       } else if (this.modeloAtual === "sotp_holding") {
         const desconto = parseNum(this.descontoHolding, 20) / 100;
         const despAdm = parseNum(this.despesasAdmHolding, 0);
-        vpDesp = r > 0 ? (despAdm / r) : 0;
+        const tHolding = parseNum(this.detalhesValuation?.aliquota_ir_holding_pct, 0) / 100;
+        vpDesp = r > 0.035 ? ((despAdm * (1 - tHolding)) / (r - 0.035)) : 0;
 
         if (this.participacoes && this.participacoes.length > 0) {
+          let proventosCalc = 0;
           this.participacoes.forEach((p) => {
             const qtd = parseNum(p.quantidade_acoes_mi !== undefined ? p.quantidade_acoes_mi : p.quantidade_acoes, 0);
             const pIntr = parseNum(p.preco_justo_intrinseco !== undefined && p.preco_justo_intrinseco !== null && p.preco_justo_intrinseco !== "" ? p.preco_justo_intrinseco : p.preco_mercado, 0);
             const pMerc = parseNum(p.preco_mercado, 0);
+            const dpaPart = parseNum(p.dpa_recebido_pela_holding ?? p.dpa_esperado, 0);
             navIntrinsecoBruto += qtd * pIntr;
             navMercadoBruto += qtd * pMerc;
+            proventosCalc += qtd * dpaPart;
           });
 
-          const navIntrinsecoLiquido = navIntrinsecoBruto - dLiquida - vpDesp;
+          const navPreDesp = navIntrinsecoBruto - dLiquida;
+          const navIntrinsecoLiquido = navPreDesp - vpDesp;
+          const pesoAdm = navPreDesp > 0 ? (vpDesp / navPreDesp) : 0;
+          const descontoResidual = Math.max(0, desconto - pesoAdm);
           const precoSemDesconto = nAcoes > 0 ? Math.max(0, navIntrinsecoLiquido / nAcoes) : 0;
-          precoJusto = precoSemDesconto * (1 - desconto);
+          precoJusto = precoSemDesconto * (1 - descontoResidual);
+
+          const proventosBrutos = parseNum(this.fclf, 0) > 0 ? parseNum(this.fclf, 0) : proventosCalc;
+          if (proventosBrutos > 0 && nAcoes > 0) {
+            const pctJcpHold = parseNum(this.detalhesValuation?.metrica_bazin?.pct_jcp, 0);
+            const vazamentoPisCofins = proventosBrutos * (pctJcpHold / 100) * 0.0925;
+            const fluxoLiqHolding = Math.max(0, proventosBrutos - despAdm - vazamentoPisCofins);
+            dpaReativo = fluxoLiqHolding / nAcoes;
+          }
         } else if (nAcoes > 0 && r > gPerp) {
           const navLiq = ev - dLiquida - vpDesp;
           precoJusto = Math.max(0, (navLiq / nAcoes) * (1 - desconto));
@@ -556,22 +645,41 @@ document.addEventListener("alpine:init", () => {
         if (recBase > 0 && r > gPerp && nAcoes > 0) {
           let recAnt = recBase;
           let somaPvSaude = 0;
+          let reservaLivreAcumulada = 0;
           const projecoesSaude = [];
 
+          const rfImportado = parseNum(
+            this.detalhesValuation?.resultado_financeiro_liquido_mi ?? this.detalhesValuation?.resultado_financeiro_float_mi,
+            rf
+          );
+          const deltaRf = rf - rfImportado;
+          const ganhosFloatBase = this.detalhesValuation?.ganhos_float_mi !== undefined
+            ? parseNum(this.detalhesValuation.ganhos_float_mi, 0) + deltaRf
+            : rf;
+          const jurosBase = this.detalhesValuation?.despesas_juros_fixa_mi !== undefined
+            ? parseNum(this.detalhesValuation.despesas_juros_fixa_mi, 0)
+            : 0;
+          const rfNominalDec = this.detalhesValuation?.rf_nominal_pct !== undefined
+            ? parseNum(this.detalhesValuation.rf_nominal_pct, 0) / 100
+            : Math.max(0, r - 0.02);
+
           const gBase = (this.taxasCrescimento && this.taxasCrescimento.length > 0 ? parseNum(this.taxasCrescimento[0], 0) : gPerp * 100) / 100;
-          retAnsBase = Math.max(0, recBase * gBase) * kAns;
+          retAnsBase = (1 + gBase) > 0 ? Math.max(0, recBase * (gBase / (1 + gBase))) * kAns : 0;
 
           for (let i = 1; i <= this.anosProjecao; i++) {
             const g = parseNum(this.taxasCrescimento[i - 1], 0) / 100;
             const recT = recAnt * (1 + g);
             const deltaRecT = Math.max(0, recT - recAnt);
             const retAnsT = deltaRecT * kAns;
-            const rfT = recBase > 0 ? rf * (recT / recBase) : rf;
+            const ganhosFloatOpT = recBase > 0 ? ganhosFloatBase * (recT / recBase) : ganhosFloatBase;
+            const rendimentoReservaT = reservaLivreAcumulada * rfNominalDec;
+            const rfT = ganhosFloatOpT + rendimentoReservaT - jurosBase;
             const lairT = (recT * margemOp) + rfT;
             const irT = Math.max(0, lairT * 0.34);
             const lucroT = lairT - irT;
             const lucroDistT = Math.max(0, lucroT - retAnsT);
             const provT = lucroDistT * payout;
+            reservaLivreAcumulada += lucroDistT * (1 - payout);
             const dpaT = provT / nAcoes;
             const pv = dpaT / Math.pow(1 + r, i);
             somaPvSaude += pv;
@@ -587,17 +695,20 @@ document.addEventListener("alpine:init", () => {
           const recTerm = recAnt * (1 + gPerp);
           const deltaRecTerm = Math.max(0, recAnt * gPerp);
           const retAnsTerm = deltaRecTerm * kAns;
-          const rfTerm = recBase > 0 ? rf * (recTerm / recBase) : rf;
+          const ganhosFloatOpTerm = recBase > 0 ? ganhosFloatBase * (recTerm / recBase) : ganhosFloatBase;
+          const rendimentoReservaTerm = reservaLivreAcumulada * rfNominalDec;
+          const jurosTerm = jurosBase * (1 + gPerp);
+          const rfTerm = ganhosFloatOpTerm + rendimentoReservaTerm - jurosTerm;
           const lairTerm = (recTerm * margemOp) + rfTerm;
           const irTerm = Math.max(0, lairTerm * 0.34);
           const lucroDistTerm = Math.max(0, lairTerm - irTerm - retAnsTerm);
-          const provTerm = lucroDistTerm * payout;
+          const provTerm = lucroDistTerm;
           const dpaTerm = provTerm / nAcoes;
           const valTermDpa = dpaTerm / (r - gPerp);
           const vpTermDpa = valTermDpa / Math.pow(1 + r, this.anosProjecao);
 
           const equityPerShare = somaPvSaude + vpTermDpa;
-          precoJusto = Math.max(0, equityPerShare - (dLiquida / nAcoes));
+          precoJusto = Math.max(0, equityPerShare);
           projecoes = projecoesSaude;
 
           // DPA sustentável ano base para Bazin
@@ -617,22 +728,52 @@ document.addEventListener("alpine:init", () => {
         precoTeto = precoJusto * (1 - mSeguranca / 100);
       }
 
-      // Preço Teto Bazin e YoC reativo
-      let dpaBazin = dpaReativo > 0 ? dpaReativo : parseNum(this.detalhesValuation?.metrica_bazin?.dpa_projetado, 0);
+      // Preço Teto Bazin e YoC reativo (com retenção de 15% de IRRF sobre JCP)
+      const pctJcp = parseNum(this.detalhesValuation?.metrica_bazin?.pct_jcp, 0);
+      const aliquotaIrrf = parseNum(this.detalhesValuation?.metrica_bazin?.aliquota_irrf_jcp, 15);
+      const fatorLiquidoJcp = 1 - (aliquotaIrrf / 100) * (pctJcp / 100);
+      const dpaBazinLiquido = dpaReativo * fatorLiquidoJcp;
+      let dpaBazin = dpaBazinLiquido > 0
+        ? dpaBazinLiquido
+        : parseNum(this.detalhesValuation?.metrica_bazin?.dpa_liquido ?? this.detalhesValuation?.metrica_bazin?.dpa_projetado, 0);
       let yocNoTeto = (dpaBazin > 0 && precoTeto > 0) ? (dpaBazin / precoTeto * 100) : 0;
       let tetoBazin6 = dpaBazin > 0 ? (dpaBazin / 0.06) : 0;
       let tetoBazin8 = dpaBazin > 0 ? (dpaBazin / 0.08) : 0;
 
-      // SSOT DO BACKEND: Sobrescreve a simulação rasa do JS com os cálculos exatos em Python 
-      // (que incluem tributação JCP, passivos contingentes e regulatórios)
+      // SSOT DO BACKEND: Sobrescreve a simulação rasa do JS com os cálculos exatos em Python
+      // (que incluem tributação JCP, passivos contingentes, Curva J e concessões finitas)
       if (this.parametrosModificados === false && this.importedPrecoJusto !== null) {
-          precoJusto = this.importedPrecoJusto;
-          precoTeto = this.importedPrecoTeto;
-          if (this.detalhesValuation && this.detalhesValuation.metrica_bazin) {
-              tetoBazin6 = this.detalhesValuation.metrica_bazin.teto_bazin_6pct;
-              tetoBazin8 = this.detalhesValuation.metrica_bazin.teto_bazin_8pct;
-              yocNoTeto = this.detalhesValuation.metrica_bazin.yoc_no_teto_modelo_pct;
+        precoJusto = this.importedPrecoJusto;
+        precoTeto = this.importedPrecoTeto;
+        const det = this.detalhesValuation;
+        if (det) {
+          if (det.soma_pv_fluxos !== undefined) somaPV = parseNum(det.soma_pv_fluxos, somaPV);
+          if (det.fcf_ano_terminal !== undefined) fcfAnoSeguinte = parseNum(det.fcf_ano_terminal, fcfAnoSeguinte);
+          if (det.valor_terminal_bruto !== undefined) valorTerminal = parseNum(det.valor_terminal_bruto, valorTerminal);
+          if (det.vp_terminal !== undefined) vpTerminal = parseNum(det.vp_terminal, vpTerminal);
+          if (det.enterprise_value !== undefined) ev = parseNum(det.enterprise_value, ev);
+          if (det.equity_value !== undefined) equity = parseNum(det.equity_value, equity);
+          if (det.p_vp_justo_gordon !== undefined) pVp = parseNum(det.p_vp_justo_gordon, pVp);
+          if (det.total_intrinseco_bruto_mi !== undefined) navIntrinsecoBruto = parseNum(det.total_intrinseco_bruto_mi, navIntrinsecoBruto);
+          if (det.total_mercado_bruto_mi !== undefined) navMercadoBruto = parseNum(det.total_mercado_bruto_mi, navMercadoBruto);
+          if (det.vp_despesas_adm_holding_mi !== undefined) vpDesp = parseNum(det.vp_despesas_adm_holding_mi, vpDesp);
+          if (det.retencao_reserva_solvencia_ans_mi !== undefined) retAnsBase = parseNum(det.retencao_reserva_solvencia_ans_mi, retAnsBase);
+          if (Array.isArray(det.projecoes) && det.projecoes.length > 0) {
+            projecoes = det.projecoes.map((p) => ({
+              ano: p.ano,
+              g: parseNum(p.crescimento_pct, 0).toFixed(2),
+              fcf: parseNum(p.fclf_projetado, 0),
+              vp: parseNum(p.valor_presente, 0),
+            }));
           }
+          if (det.metrica_bazin) {
+            const mb = det.metrica_bazin;
+            dpaBazin = mb.dpa_liquido ?? mb.dpa_projetado ?? dpaBazin;
+            tetoBazin6 = mb.preco_teto_bazin_6pct ?? mb.teto_bazin_6pct ?? tetoBazin6;
+            tetoBazin8 = mb.preco_teto_bazin_8pct ?? mb.teto_bazin_8pct ?? tetoBazin8;
+            yocNoTeto = mb.yield_on_cost_no_preco_teto_modelo ?? mb.yoc_no_teto_modelo_pct ?? yocNoTeto;
+          }
+        }
       }
 
       return {
