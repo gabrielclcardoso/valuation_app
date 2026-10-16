@@ -20,7 +20,7 @@ def serve_frontend(request: Request):
 
     try:
         # Se o cookie for válido, renderiza a calculadora
-        scheme, _, param = token.partition(" ")
+        _, _, param = token.partition(" ")
         jwt.decode(param, SECRET_KEY, algorithms=[ALGORITHM])
         return templates.TemplateResponse(request=request, name="calculator.html")
     except JWTError:

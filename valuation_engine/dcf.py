@@ -6,44 +6,6 @@ from typing import List, Dict, Any, Optional
 from valuation_engine.bazin import calculate_bazin
 
 
-def calculate_wacc(
-    rf_real: float,
-    ipca: float,
-    beta: float,
-    erp: float,
-    kd_bruto: float,
-    aliquota_ir: float,
-    equity_ratio: float,
-    spread_governanca: float = 0.0,
-) -> Dict[str, Any]:
-    """Calcula o WACC nominal em BRL.
-    rf_nominal = (1 + rf_real) * (1 + ipca) - 1
-    ke = rf_nominal + beta * erp + spread_governanca
-    kd_liquido = kd_bruto * (1 - aliquota_ir)
-    wacc = ke * equity_ratio + kd_liquido * (1 - equity_ratio)
-    """
-    rf_nom = ((1.0 + rf_real / 100.0) * (1.0 + ipca / 100.0) - 1.0) * 100.0
-    ke = rf_nom + (beta * erp) + spread_governanca
-    kd_liq = kd_bruto * (1.0 - aliquota_ir / 100.0)
-    debt_ratio = 1.0 - equity_ratio
-    wacc = (ke * equity_ratio) + (kd_liq * debt_ratio)
-    return {
-        "rf_real": rf_real,
-        "ipca_esperado": ipca,
-        "rf_nominal": round(rf_nom, 2),
-        "beta": round(beta, 2),
-        "erp": round(erp, 2),
-        "spread_governanca": round(spread_governanca, 2),
-        "ke": round(ke, 2),
-        "kd_bruto": round(kd_bruto, 2),
-        "aliquota_ir": round(aliquota_ir, 2),
-        "kd_liquido": round(kd_liq, 2),
-        "equity_ratio": round(equity_ratio, 2),
-        "debt_ratio": round(debt_ratio, 2),
-        "wacc": round(wacc, 2),
-    }
-
-
 def calculate_cagr(valor_inicial: float, valor_final: float, periodos: int) -> float:
     """Calcula a taxa de crescimento anual composta (CAGR) em porcentagem.
     Retorna 0.0 se valores forem inválidos ou períodos <= 0.
@@ -194,7 +156,7 @@ def calculate_dcf(
         passivos_contingentes: Passivos contingentes e atuariais dedutíveis para IRPJ/CSLL (R$ Mi)
         passivos_regulatorios: Passivos regulatórios (R$ Mi). Se negativo, tratado como ativo regulatório.
         aliquota_ir_csll: Alíquota de IRPJ/CSLL para cálculo do benefício fiscal (padrão 34.0%)
-        quase_divida_dedutivel: Se True, aplica benefício fiscal de 34% a 'outros_passivos'
+        pct_contingencia_dedutivel: Percentual de dedutibilidade fiscal sobre contingências/outros_passivos (0% a 100%)
         margem_seguranca: Margem de segurança aplicada ao Preço Justo (%)
         dpa_projetado: DPA sustentável esperado para métrica Bazin (R$)
         pct_jcp: Percentual dos proventos pagos sob a forma de JCP bruto (%)

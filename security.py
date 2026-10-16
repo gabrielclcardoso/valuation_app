@@ -17,7 +17,7 @@ def get_current_user_id(request: Request) -> int:
         )
 
     try:
-        scheme, _, param = token.partition(" ")
+        _, _, param = token.partition(" ")
         payload = jwt.decode(param, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
         if user_id is None:

@@ -8,7 +8,7 @@ from routers import auth, valuations, quotes, pages
 Base.metadata.create_all(bind=engine)
 ensure_db_schema()
 
-app = FastAPI(title="API de Valuation FCD - 9 Passos")
+app = FastAPI(title="Valuation App - Plataforma Fundamentalista B3")
 
 # Configuração de CORS
 app.add_middleware(

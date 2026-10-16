@@ -8,7 +8,6 @@ Distingue com rigor:
 """
 from typing import List, Dict, Any, Optional
 from valuation_engine.bazin import calculate_bazin
-from valuation_engine.dcf import calculate_dcf
 
 
 def calculate_operadora_saude(

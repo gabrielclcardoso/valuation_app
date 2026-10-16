@@ -3,21 +3,6 @@ from pydantic import BaseModel
 from datetime import datetime
 
 
-class UserRegister(BaseModel):
-    nome: str
-    username: str
-    senha: str
-
-
-class UserResponse(BaseModel):
-    id: int
-    nome: str
-    username: str
-
-    class Config:
-        from_attributes = True
-
-
 class LoginRequest(BaseModel):
     username: str
     senha: str

@@ -2,10 +2,9 @@
 Garante a integridade matemática, estabilidade, tratamento de edge cases e blind mode.
 """
 import io
-import json
 import sys
 import unittest
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database import Base
 from models import ValuationDB, UserDB
